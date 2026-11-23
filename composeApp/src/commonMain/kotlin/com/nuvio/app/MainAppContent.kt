@@ -510,6 +510,12 @@ internal fun MainAppContent(
                 if (enabledAddons.isWaitingForFirstEnabledManifest()) return@collectLatest
                 HomeCatalogSettingsRepository.syncCatalogs(enabledAddons)
                 HomeRepository.refresh(enabledAddons)
+                // refresh publishes its initial state synchronously. An empty/error result is
+                // just as renderable as a populated catalog; a pending first request is not.
+                if (isDesktop && !initialHomeReady) {
+                    HomeRepository.uiState.first { !it.isLoading || it.sections.isNotEmpty() }
+                    initialHomeReady = true
+                }
             }
     }
 
@@ -697,8 +703,10 @@ internal fun MainAppContent(
         if (!ownsAppRuntime) return@LaunchedEffect
         NetworkStatusRepository.ensureStarted()
         EpisodeReleaseNotificationsRepository.refreshAsync()
-        kotlinx.coroutines.delay(5_000)
-        initialHomeReady = true
+        if (!isDesktop) {
+            kotlinx.coroutines.delay(5_000)
+            initialHomeReady = true
+        }
     }
 
     LaunchedEffect(networkCondition) {
@@ -1973,7 +1981,7 @@ internal fun MainAppContent(
                                 onOnboardingClick = {
                                     navController.navigate(OnboardingRoute(isReviewMode = true))
                                 },
-                                onInitialHomeContentRendered = { initialHomeReady = true },
+                                onInitialHomeContentRendered = { if (!isDesktop) initialHomeReady = true },
                             )
                         },
                         onBack = {
@@ -2675,10 +2683,11 @@ internal fun MainAppContent(
             androidx.compose.animation.AnimatedVisibility(
                 visibleState = launchOverlayState,
                 enter = fadeIn(),
-                exit = fadeOut(androidx.compose.animation.core.tween(400)),
+                exit = if (launchOverlayProfile == null) fadeOut(tween(400)) else androidx.compose.animation.ExitTransition.None,
             ) {
                 AppLaunchOverlay(
                     profile = launchOverlayProfile,
+                    flight = if (launchOverlayProfile != null) profileExitFlight() else 0f,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

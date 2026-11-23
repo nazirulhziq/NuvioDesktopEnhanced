@@ -754,36 +754,22 @@ private fun TabletTopPillItem(
 internal fun AppLoadingContent(
     modifier: Modifier = Modifier,
     profile: NuvioProfile? = null,
+    flight: Float = 0f,
 ) {
     val tokens = MaterialTheme.nuvio
     val avatars by com.nuvio.app.features.profiles.AvatarRepository.avatars.collectAsStateWithLifecycle()
-    var settled by remember(profile?.profileIndex) { mutableStateOf(false) }
-    LaunchedEffect(profile?.profileIndex) {
-        settled = false
-        kotlinx.coroutines.delay(120)
-        settled = true
-    }
-    val flight by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (settled) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 1600,
-            delayMillis = 900,
-            easing = androidx.compose.animation.core.FastOutSlowInEasing,
-        ),
-        label = "profile_load_flight",
-    )
-    Box(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
+        val flightDistance = maxHeight / 2 + 128.dp
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (profile != null) {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.graphicsLayer {
-                        translationX = 180.dp.toPx() * flight
-                        translationY = 260.dp.toPx() * flight
+                        translationY = flightDistance.toPx() * flight
                         scaleX = 1f - 0.62f * flight
                         scaleY = 1f - 0.62f * flight
                         alpha = 1f - 0.85f * flight
@@ -803,7 +789,9 @@ internal fun AppLoadingContent(
                 )
             }
             Spacer(modifier = Modifier.height(tokens.spacing.sectionGap))
-            NuvioLoadingIndicator()
+            Box(Modifier.graphicsLayer { alpha = if (flight == 0f) 1f else 0f }) {
+                NuvioLoadingIndicator()
+            }
         }
     }
 }
@@ -812,15 +800,16 @@ internal fun AppLoadingContent(
 internal fun AppLaunchOverlay(
     profile: NuvioProfile?,
     modifier: Modifier = Modifier,
+    flight: Float = 0f,
 ) {
     Box(
         modifier = modifier.zIndex(NuvioTokens.Z.dialog),
     ) {
         ProfileBackgroundBackdrop(
             profile = profile,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 1f - flight },
         )
-        AppLoadingContent(modifier = Modifier.fillMaxSize(), profile = profile)
+        AppLoadingContent(modifier = Modifier.fillMaxSize(), profile = profile, flight = flight)
     }
 }
 

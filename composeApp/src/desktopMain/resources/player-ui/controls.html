@@ -227,11 +227,6 @@
             <svg><use href="#icon-arrow-back"></use></svg>
           </button>
         </div>
-        <div class="header-center">
-          <button class="codeine-title parental-guide-trigger" id="codeineTitle" type="button" data-command="showParentalGuide"></button>
-          <div class="codeine-episode" id="codeineEpisode" hidden></div>
-          <div class="codeine-player-badges" id="codeinePlayerBadges" hidden></div>
-        </div>
         <nav class="header-actions" aria-label="Player actions">
           <button class="header-button" id="submitIntroButton" data-command="submitIntro" aria-label="Submit intro"><svg><use href="#icon-flag"></use></svg></button>
           <button class="header-button" id="partyButton" type="button" aria-label="Watch party" hidden><svg><use href="#icon-party"></use></svg></button>
@@ -239,8 +234,8 @@
           <button class="header-button" id="miniPlayerButton" data-command="minimize" aria-label="Mini player" title="Mini player"><svg><use href="#icon-miniplayer"></use></svg></button>
           <button class="header-button pip-lock-button" id="pipLockButton" type="button" aria-pressed="false" aria-label="Lock player controls"><svg><use href="#icon-lock"></use></svg></button>
           <button class="header-button" id="pipButton" data-command="pictureInPicture" aria-label="Picture in Picture" title="Picture in Picture"><svg><use href="#icon-pip"></use></svg></button>
-          <button class="header-button" id="fullscreenButton" data-command="toggleFullscreen" aria-label="Enter fullscreen"><svg><use id="fullscreenIcon" href="#icon-fullscreen"></use></svg></button>
           <button class="header-button" id="backButton" data-command="back" aria-label="Close player"><svg><use href="#icon-close"></use></svg></button>
+          <button class="header-button" id="fullscreenButton" data-command="toggleFullscreen" aria-label="Enter fullscreen"><svg><use id="fullscreenIcon" href="#icon-fullscreen"></use></svg></button>
         </nav>
       </header>
 
@@ -256,11 +251,6 @@
       </section>
 
       <aside class="torrent-stats-overlay" id="torrentStatsOverlay" aria-label="Network statistics" hidden>
-        <span class="torrent-stats-time-row" id="torrentStatsTimeRow">
-          <span class="torrent-stats-clock" id="torrentStatsClock"></span>
-          <span class="torrent-stats-dot" aria-hidden="true">·</span>
-          <span class="torrent-stats-ends" id="torrentStatsEnds"></span>
-        </span>
         <span class="torrent-stats-text" id="torrentStatsText"></span>
       </aside>
 
@@ -446,15 +436,22 @@
       </button>
 
       <section class="progress" aria-label="Playback progress">
-        <section class="metadata" aria-label="Playback metadata">
-          <button class="title parental-guide-trigger" id="title" type="button" data-command="showParentalGuide"></button>
-          <div class="episode" id="episode" hidden></div>
-          <div class="meta-row">
-            <span class="stream-title" id="streamTitle"></span>
-            <span class="provider" id="providerName"></span>
-          </div>
-          <div class="player-badges" id="playerBadges" hidden></div>
-        </section>
+        <div class="timeline-heading">
+          <section class="metadata" aria-label="Playback metadata">
+            <button class="title parental-guide-trigger" id="title" type="button" data-command="showParentalGuide"></button>
+            <div class="episode" id="episode" hidden></div>
+            <div class="meta-row">
+              <span class="stream-title" id="streamTitle"></span>
+              <span class="provider" id="providerName"></span>
+            </div>
+            <div class="player-badges" id="playerBadges" hidden></div>
+          </section>
+          <span class="torrent-stats-time-row" id="torrentStatsTimeRow" hidden>
+            <span class="torrent-stats-clock" id="torrentStatsClock"></span>
+            <span class="torrent-stats-dot" aria-hidden="true">·</span>
+            <span class="torrent-stats-ends" id="torrentStatsEnds"></span>
+          </span>
+        </div>
         <div class="chapter-title" id="chapterTitle" hidden></div>
         <div class="codeine-seek-preview" id="codeineSeekPreview" aria-hidden="true">
           <div class="seek-filmstrip-carousel" id="seekFilmstripCarousel">
@@ -574,9 +571,6 @@
                 </button>
               </div>
             </div>
-            <button class="codeine-control-btn codeine-action-btn" id="codeineFullscreenButton" data-command="toggleFullscreen" aria-label="Toggle fullscreen" data-shortcut="F">
-              <svg><use id="codeineFullscreenIcon" href="#icon-fullscreen"></use></svg>
-            </button>
           </div>
         </div>
         <div class="codeine-tooltip" id="codeineTooltip" role="tooltip" aria-hidden="true"><span class="codeine-tooltip-text"></span><span class="codeine-tooltip-keys"></span></div>

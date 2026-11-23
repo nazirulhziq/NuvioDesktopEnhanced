@@ -170,7 +170,6 @@ button:disabled {
 .next-episode-card,
 .header-actions,
 .header-left,
-.header-center,
 .center-controls,
 .progress,
 .torrent-stats-overlay {
@@ -185,7 +184,6 @@ button:disabled {
 .player.native-resizing .next-episode-card,
 .player.native-resizing .header-actions,
 .player.native-resizing .header-left,
-.player.native-resizing .header-center,
 .player.native-resizing .center-controls,
 .player.native-resizing .progress,
 .player.native-resizing .modal-layer,
@@ -205,7 +203,6 @@ button:disabled {
 .player.chrome-hidden .metadata,
 .player.chrome-hidden .header-actions,
 .player.chrome-hidden .header-left,
-.player.chrome-hidden .header-center,
 .player.chrome-hidden .center-controls,
 .player.chrome-hidden .progress,
 .player.chrome-hidden .torrent-stats-overlay {
@@ -236,7 +233,6 @@ button:disabled {
 .player.error-active .next-episode-card,
 .player.error-active .header-actions,
 .player.error-active .header-left,
-.player.error-active .header-center,
 .player.error-active .center-controls,
 .player.error-active .progress,
 .player.error-active .modal-layer,
@@ -334,11 +330,6 @@ button:disabled {
   top: calc(20px + env(safe-area-inset-top));
   right: clamp(18px, 1.8vw, 26px);
   z-index: 24;
-  /*
-   * Column layout: each row (clock row + net stat row) is stretched to fill
-   * the full container width, then text-align: right pins every row's
-   * rightmost character to the same edge — no asymmetric padding can sneak in.
-   */
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -414,7 +405,7 @@ button:disabled {
   display: none !important;
 }
 
-/* Row 2: network speed — same right-edge as row 1 via inherited text-align */
+/* Network speed stays in the stats overlay, independent of the timeline clock. */
 .torrent-stats-text {
   font-size: 12px;
   font-weight: 600;
@@ -543,6 +534,18 @@ button:disabled {
   justify-content: flex-end;
   align-items: flex-start;
   gap: 18px;
+}
+
+.timeline-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.player.pip-mode .timeline-heading,
+.player.codeine-seeking-seekbar-only .timeline-heading {
+  display: none;
 }
 
 .metadata {
@@ -4588,11 +4591,9 @@ svg {
 
 /* Official UI mode (default): hide CodeineXO elements completely */
 .player:not(.ui-codeinexo) .header-left,
-.player:not(.ui-codeinexo) .header-center,
 .player:not(.ui-codeinexo) .codeine-action-row,
 .player:not(.ui-codeinexo) .codeine-time-pill,
 .player.ui-official .header-left,
-.player.ui-official .header-center,
 .player.ui-official .codeine-action-row,
 .player.ui-official .codeine-time-pill {
   display: none !important;
@@ -4632,7 +4633,7 @@ svg {
 
 .player.ui-codeinexo .torrent-stats-overlay,
 .player.ui-official .torrent-stats-overlay {
-  top: calc(28px + env(safe-area-inset-top));
+  top: calc(70px + env(safe-area-inset-top));
   right: calc(20px + env(safe-area-inset-right));
   height: auto;
   min-height: 40px;
@@ -4677,12 +4678,9 @@ svg {
   text-align: left;
 }
 
-.player.ui-official .torrent-stats-time-row {
-  justify-content: flex-start;
-}
 
 .player.ui-official .parental-guide {
-  /* Reserve both stats rows plus breathing room, even while chrome is hidden. */
+  /* Leave room below the network stats. */
   top: calc(var(--slider-bottom) + env(safe-area-inset-top) + 56px);
 }
 

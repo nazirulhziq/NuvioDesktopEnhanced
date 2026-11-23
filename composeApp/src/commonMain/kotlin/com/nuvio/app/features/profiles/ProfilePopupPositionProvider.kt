@@ -10,7 +10,8 @@ internal class ProfilePopupPositionProvider(
     private val margin: Int,
     private val gap: Int,
     private val preferBelow: Boolean,
-    private val onPositioned: (opensBelow: Boolean, availableHeight: Int) -> Unit,
+    private val centerOnAvatar: Boolean,
+    private val onPositioned: (opensBelow: Boolean, availableHeight: Int, pivotX: Float) -> Unit,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -25,19 +26,26 @@ internal class ProfilePopupPositionProvider(
             spaceAbove > spaceBelow -> false
             else -> preferBelow
         }
-        onPositioned(opensBelow, (if (opensBelow) spaceBelow else spaceAbove).coerceAtLeast(0))
         val y = if (opensBelow) {
             anchorBounds.bottom + gap
         } else {
             anchorBounds.top - gap - popupContentSize.height
         }
-        val x = if (layoutDirection == LayoutDirection.Ltr) {
+        val anchorX = anchorBounds.center.x
+        val x = if (centerOnAvatar) {
+            anchorX - popupContentSize.width / 2
+        } else if (layoutDirection == LayoutDirection.Ltr) {
             anchorBounds.right - popupContentSize.width
         } else {
             anchorBounds.left
         }
+        val left = x.coerceIn(margin, (windowSize.width - popupContentSize.width - margin).coerceAtLeast(margin))
+        val pivotX = if (centerOnAvatar && popupContentSize.width > 0) {
+            ((anchorX - left).toFloat() / popupContentSize.width).coerceIn(0f, 1f)
+        } else 0.5f
+        onPositioned(opensBelow, (if (opensBelow) spaceBelow else spaceAbove).coerceAtLeast(0), pivotX)
         return IntOffset(
-            x.coerceIn(margin, (windowSize.width - popupContentSize.width - margin).coerceAtLeast(margin)),
+            left,
             y.coerceIn(margin, (windowSize.height - popupContentSize.height - margin).coerceAtLeast(margin)),
         )
     }

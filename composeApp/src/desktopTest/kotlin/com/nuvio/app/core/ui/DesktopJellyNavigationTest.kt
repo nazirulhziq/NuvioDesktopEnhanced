@@ -70,6 +70,22 @@ class DesktopJellyNavigationTest {
     }
 
     @Test
+    fun hoverTemporarilyExpandsScrollCollapsedDockOnLibrary() {
+        selected.intValue = 2
+        val scroll = NuvioNavBarScrollState()
+        setContent(scrollState = scroll)
+        compose.runOnIdle { scroll.collapse() }
+        val library = compose.onNodeWithContentDescription("Library")
+        val compactWidth = library.fetchSemanticsNode().boundsInRoot.width
+        library.performMouseInput { enter(center) }
+        compose.waitForIdle()
+        assertTrue(library.fetchSemanticsNode().boundsInRoot.width > compactWidth * 1.5f)
+        library.performMouseInput { exit() }
+        compose.waitForIdle()
+        assertEquals(compactWidth, library.fetchSemanticsNode().boundsInRoot.width, 2f)
+    }
+
+    @Test
     fun profileHoldOpensTheSwitcherWithoutNavigating() {
         setContent(withProfile = true)
         compose.onNodeWithContentDescription("Settings").performTouchInput { longClick() }
@@ -81,7 +97,7 @@ class DesktopJellyNavigationTest {
         }
     }
 
-    private fun setContent(withProfile: Boolean = false) {
+    private fun setContent(withProfile: Boolean = false, scrollState: NuvioNavBarScrollState? = null) {
         val labels = listOf("Home", "Search", "Library", "Settings")
         val icons = listOf(Icons.Default.Home, Icons.Default.Search, Icons.Default.VideoLibrary, Icons.Default.Settings)
         compose.setContent {
@@ -113,6 +129,7 @@ class DesktopJellyNavigationTest {
                                 } else null,
                             )
                         },
+                        scrollState = scrollState,
                         isHeroEnabled = true,
                         modifier = Modifier.align(Alignment.TopCenter),
                     )

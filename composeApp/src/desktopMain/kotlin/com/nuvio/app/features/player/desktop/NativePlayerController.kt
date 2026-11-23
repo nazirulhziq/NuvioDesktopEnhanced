@@ -1132,6 +1132,10 @@ internal class NativePlayerController(
                     PlayerSettingsRepository.setEyeFilterColor("#000000")
                 }
             }
+            "exitFullscreen" -> {
+                exitDesktopAppFullscreen(SwingUtilities.getWindowAncestor(host))
+                onDesktopFullscreenChanged()
+            }
             "toggleFullscreen" -> {
                 if (onEvent(type, value)) 
                     return

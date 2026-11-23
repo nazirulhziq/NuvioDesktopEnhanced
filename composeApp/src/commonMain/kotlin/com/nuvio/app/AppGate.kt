@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.controller.ControllerFocusEngine
@@ -207,6 +210,11 @@ internal fun AppGate(
     var skipProfileSelectionEnterAnimation by remember { mutableStateOf(false) }
     var mainContentStarted by rememberSaveable { mutableStateOf(false) }
     var switchingProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    // Keep the desktop arrival above both the picker and its destination. Neither screen's
+    // AnimatedContent exit may dispose the avatar while selection or flight is in progress.
+    var arrivalProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    var arrivalGeneration by remember { mutableStateOf(0) }
+    var arrivalHomeReady by remember { mutableStateOf(false) }
     val gateScope = rememberCoroutineScope()
     val externalMainContentReady = if (!renderMainContent && appGateController != null) {
         val ready by appGateController.mainContentReady.collectAsStateWithLifecycle()
@@ -230,6 +238,11 @@ internal fun AppGate(
         if (!renderMainContent) {
             appGateController?.beginContentReload()
         }
+        if (isDesktop && renderMainContent) {
+            arrivalGeneration++
+            arrivalProfile = profile
+            arrivalHomeReady = false
+        }
         switchingProfile = profile
         try {
             ProfileRepository.switchToProfile(profile.profileIndex)
@@ -239,6 +252,9 @@ internal fun AppGate(
                     SyncManager.pullAllForProfile(profile.profileIndex)
                 }
             }
+        } catch (failure: Throwable) {
+            arrivalProfile = null
+            throw failure
         } finally {
             switchingProfile = null
         }
@@ -394,6 +410,7 @@ internal fun AppGate(
                 if (allowCachedProfileAccess) {
                     enterProfileGate(cachedProfiles, syncOnEnter = false)
                 } else {
+                    arrivalProfile = null
                     ProfileRepository.clearInMemory()
                     profileSelectionLoading = false
                     profileSelectionTransitionActive = false
@@ -448,7 +465,7 @@ internal fun AppGate(
     }
 
     val profileOverlayVisible =
-        gateScreen == AppGateScreen.ProfileSelection.name || profileSelectionLoading
+        arrivalProfile == null && (gateScreen == AppGateScreen.ProfileSelection.name || profileSelectionLoading)
     val profileOverlayState = remember {
         MutableTransitionState(profileOverlayVisible)
     }
@@ -551,7 +568,9 @@ internal fun AppGate(
                     )
                 }
                 AppGateScreen.Main.name -> {
-                    if (renderMainContent) {
+                    val generation = arrivalGeneration
+                    val mountDestination = arrivalProfile == null || gateScreen == AppGateScreen.Main.name
+                    if (renderMainContent && mountDestination) key(generation) {
                         MainAppContent(
                             initialTab = initialTab,
                             initialRoute = initialRoute,
@@ -559,7 +578,7 @@ internal fun AppGate(
                             useNativeTabBar = useNativeTabBar,
                             useTabletFloatingTabBar = useTabletFloatingTabBar,
                             ownsAppRuntime = ownsAppRuntime,
-                            showLaunchOverlay = !profileSelectionLoading,
+                            showLaunchOverlay = !profileSelectionLoading && arrivalProfile == null,
                             onNavigate = onNavigate,
                             onGoBack = onGoBack,
                             onReplace = onReplace,
@@ -567,11 +586,12 @@ internal fun AppGate(
                             onTabTitles = onTabTitles,
                             appGateController = appGateController,
                             onRootContentReady = { ready ->
-                                if (ready) {
-                                    profileSelectionLoading = false
+                                if (generation == arrivalGeneration && gateScreen == AppGateScreen.Main.name) {
+                                    arrivalHomeReady = ready
+                                    if (ready) profileSelectionLoading = false
                                 }
                                 onAppReady?.invoke(
-                                    ready && gateScreen == AppGateScreen.Main.name,
+                                    ready && arrivalProfile == null && gateScreen == AppGateScreen.Main.name,
                                 )
                             },
                             onSwitchProfile = {
@@ -590,13 +610,14 @@ internal fun AppGate(
         androidx.compose.animation.AnimatedVisibility(
             visibleState = launchOverlayState,
             enter = fadeIn(tween(400)),
-            exit = fadeOut(tween(400)),
+            exit = androidx.compose.animation.ExitTransition.None,
             modifier = Modifier.fillMaxSize(),
         ) {
             AppLaunchOverlay(
                 profile = switchingProfile
                     ?: profileState.activeProfile
                     ?: profileState.profiles.firstOrNull(),
+                flight = profileExitFlight(),
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -608,11 +629,12 @@ internal fun AppGate(
             } else {
                 fadeIn(tween(400))
             },
-            exit = fadeOut(tween(400)),
+            exit = if (!isDesktop && profileSelectionTransitionActive) androidx.compose.animation.ExitTransition.None else fadeOut(tween(400)),
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(NuvioTokens.Z.dialog),
         ) {
+            val exitFlight = if (!isDesktop && profileSelectionTransitionActive) profileExitFlight() else 0f
             Box(modifier = Modifier.fillMaxSize()) {
                 // The picker is a Compose-owned screen: keep the spatial engine out of it so its
                 // selection never activates items on the main content hidden underneath the gate.
@@ -682,10 +704,10 @@ internal fun AppGate(
                     interactionEnabled = !profileSelectionLoading,
                     onBack = onBack,
                     contentVisible = !profileSelectionTransitionActive,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 1f - exitFlight },
                 )
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = profileSelectionTransitionActive,
+                    visible = profileSelectionTransitionActive && arrivalProfile == null,
                     enter = fadeIn(tween(180)),
                     exit = fadeOut(tween(180)),
                     modifier = Modifier.fillMaxSize(),
@@ -693,6 +715,32 @@ internal fun AppGate(
                     AppLoadingContent(
                         modifier = Modifier.fillMaxSize(),
                         profile = switchingProfile ?: profileState.activeProfile,
+                        flight = exitFlight,
+                    )
+                }
+            }
+        }
+
+        arrivalProfile?.let { profile ->
+            key(arrivalGeneration) {
+                ProfileArrivalFlight(
+                    ready = switchingProfile == null && (
+                        gateScreen == AppGateScreen.Onboarding.name ||
+                            (gateScreen == AppGateScreen.Main.name && arrivalHomeReady)
+                    ),
+                    onFinished = {
+                        arrivalProfile = null
+                        if (gateScreen == AppGateScreen.Main.name && arrivalHomeReady) onAppReady?.invoke(true)
+                    },
+                ) { flight ->
+                    AppLaunchOverlay(
+                        profile = profile,
+                        flight = flight,
+                        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) awaitPointerEvent().changes.forEach { it.consume() }
+                            }
+                        },
                     )
                 }
             }

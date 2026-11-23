@@ -71,7 +71,7 @@ internal fun DesktopNavigationBar(
         ((isHomeSelected || isSettingsSelected) && isScrolledAwayFromTop &&
             !(isHomeSelected && keepTransparentOnScroll))
     val labelFraction by animateFloatAsState(
-        targetValue = desktopNavigationLabelFraction(navBarStyle, isHomeSelected, isHeroEnabled, isAnyHovered, profileSwitcherOpen, isScrolledAwayFromTop),
+        targetValue = desktopNavigationLabelFraction(navBarStyle, isHomeSelected, isHeroEnabled, isAnyHovered, profileSwitcherOpen, isScrolledAwayFromTop, scrollCollapsed = scrollState?.labelVisibility == 0f),
         animationSpec = tween(320, easing = FastOutSlowInEasing),
         label = "desktop_nav_labels",
     )
@@ -147,11 +147,13 @@ internal fun desktopNavigationLabelFraction(
     isHovered: Boolean,
     profileSwitcherOpen: Boolean,
     isScrolledAwayFromTop: Boolean,
+    scrollCollapsed: Boolean = false,
 ): Float = when (style) {
     NavBarStyle.EXPANDED -> 1f
     NavBarStyle.COMPACT -> 0f
     else -> when {
         isHovered || profileSwitcherOpen -> 1f
+        scrollCollapsed -> 0f
         isHomeSelected && isHeroEnabled -> 0f
         isHomeSelected && isScrolledAwayFromTop -> 0f
         else -> 1f

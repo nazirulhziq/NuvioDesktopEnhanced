@@ -58,6 +58,7 @@ import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.DesktopNavigationBar
+import com.nuvio.app.core.ui.floatingNavigationBarPadding
 import com.nuvio.app.core.ui.FloatingNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationItem
 import com.nuvio.app.core.ui.PlatformBackHandler
@@ -439,11 +440,12 @@ internal fun MainTabsDestination(
                 }
 
                 if (useDesktopBottomDock) {
-                    FloatingNavigationBar(
+                    DesktopNavigationBar(
                         modifier = Modifier.align(Alignment.BottomCenter),
                         scrollState = navBarScrollState,
                         hazeState = navBarHazeState,
-                        compactSize = false,
+                        contentPadding = floatingNavigationBarPadding(),
+                        profileSwitcherOpen = isTopProfileSwitcherOpen,
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
                     )

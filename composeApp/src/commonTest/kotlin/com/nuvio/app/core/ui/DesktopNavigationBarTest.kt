@@ -30,6 +30,18 @@ class DesktopNavigationBarTest {
     }
 
     @Test
+    fun scrollCollapsedDockExpandsForHoverOrPopupOnEveryTab() {
+        for (home in listOf(true, false)) {
+            for (hover in listOf(true, false)) {
+                for (popup in listOf(true, false)) {
+                    assertEquals(if (hover || popup) 1f else 0f,
+                        desktopNavigationLabelFraction(NavBarStyle.ADAPTIVE, home, false, hover, popup, false, scrollCollapsed = true))
+                }
+            }
+        }
+    }
+
+    @Test
     fun otherTabsKeepTheirLabelsWhileScrolling() {
         assertEquals(1f, labels(home = false, scrolled = true))
     }

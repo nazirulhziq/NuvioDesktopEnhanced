@@ -215,8 +215,8 @@ fun ProfileSwitcherTab(
     val popupScale = remember { Animatable(0.96f) }
 
     LaunchedEffect(showPopup) {
-        onPopupStateChanged?.invoke(showPopup)
         if (showPopup) {
+            onPopupStateChanged?.invoke(true)
             popupVisible = true
             launch { popupAlpha.animateTo(1f, tween(180, easing = FastOutSlowInEasing)) }
             launch {
@@ -231,8 +231,9 @@ fun ProfileSwitcherTab(
             launch { popupAlpha.animateTo(0f, tween(140, easing = FastOutSlowInEasing)) }
             launch {
                 popupScale.animateTo(0.96f, tween(160, easing = FastOutSlowInEasing))
-                // Remove from composition after animation completes
+                // Keep the dock (and its avatar anchor) still until the exit finishes.
                 popupVisible = false
+                onPopupStateChanged?.invoke(false)
                 pinProfile = null
                 dragTargetProfileIndex = null
             }
@@ -301,6 +302,7 @@ fun ProfileSwitcherTab(
 
         // Floating profile popup (stays composed during exit animation)
         if (popupVisible && profiles.isNotEmpty()) {
+            var pivotX by remember { mutableStateOf(0.5f) }
             var opensBelow by remember { mutableStateOf(popupBelowAnchor) }
             var availableHeight by remember { mutableStateOf<Dp?>(null) }
             val dismissPopup = { if (pinProfile != null) pinProfile = null else showPopup = false }
@@ -310,7 +312,9 @@ fun ProfileSwitcherTab(
                         margin = with(density) { 16.dp.roundToPx() },
                         gap = with(density) { 18.dp.roundToPx() },
                         preferBelow = popupBelowAnchor,
-                        onPositioned = { below, height ->
+                        centerOnAvatar = isDesktop,
+                        onPositioned = { below, height, x ->
+                            pivotX = x
                             opensBelow = below
                             availableHeight = with(density) { height.toDp() }
                         },
@@ -332,8 +336,9 @@ fun ProfileSwitcherTab(
                         alpha = popupAlpha.value
                         scaleX = popupScale.value
                         scaleY = popupScale.value
+                        if (isDesktop && !opensBelow) translationY = (1f - popupAlpha.value) * 12.dp.toPx()
                         transformOrigin = TransformOrigin(
-                            0.5f,
+                            pivotX,
                             if (opensBelow) 0f else 1f,
                         )
                     },

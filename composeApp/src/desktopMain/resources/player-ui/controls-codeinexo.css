@@ -77,10 +77,9 @@
 }
 
 /* CodeineXO UI mode */
-.player.ui-codeinexo .progress .metadata,
+.player.ui-codeinexo .metadata .meta-row,
 .player.ui-codeinexo .official-action-row,
 .player.ui-codeinexo .header-actions #backButton,
-.player.ui-codeinexo .header-actions #fullscreenButton,
 .player.ui-codeinexo .header-actions #miniPlayerButton,
 .player.ui-codeinexo .header-actions #partyButton,
 .player.ui-codeinexo .header-actions #pipButton {
@@ -125,12 +124,6 @@
   will-change: opacity, transform;
 }
 
-.player.ui-codeinexo .header-center {
-  transform: translateX(-50%) translateY(0);
-  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-
 .player.ui-codeinexo .center-controls {
   transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity;
@@ -148,13 +141,6 @@
 .player.ui-codeinexo.chrome-hidden .party-pill:not(.pinned) {
   opacity: 0;
   transform: translateY(-24px);
-  pointer-events: none;
-  transition: opacity 380ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 400ms cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.player.ui-codeinexo.chrome-hidden .header-center {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-24px);
   pointer-events: none;
   transition: opacity 380ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 400ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
@@ -219,7 +205,6 @@
 }
 
 .player.ui-codeinexo.native-resizing .header-left,
-.player.ui-codeinexo.native-resizing .header-center,
 .player.ui-codeinexo.native-resizing .header-actions,
 .player.ui-codeinexo.native-resizing .center-controls,
 .player.ui-codeinexo.native-resizing .progress,
@@ -340,102 +325,6 @@
   width: 22px;
   height: 22px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.50));
-}
-
-.player.ui-codeinexo .header-center {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: center;
-  width: max-content;
-  max-width: calc(100% - 160px);
-  overflow: visible;
-  box-sizing: border-box;
-  pointer-events: none;
-  padding: 0;
-  margin: 0;
-  z-index: 2;
-}
-
-.player.ui-codeinexo .codeine-title {
-  align-self: center;
-  font-size: var(--title);
-  font-weight: 700;
-  line-height: 1.25;
-  color: #fff;
-  padding: 0 12px;
-  margin: 0;
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.95),
-    0 2px 6px rgba(0, 0, 0, 0.70),
-    0 4px 12px rgba(0, 0, 0, 0.35);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-}
-
-.player.ui-codeinexo .codeine-episode {
-  font-size: var(--episode);
-  font-weight: 500;
-  line-height: 1.3;
-  color: rgba(255, 255, 255, 0.85);
-  margin-top: 2px;
-  padding: 0 12px;
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.95),
-    0 2px 6px rgba(0, 0, 0, 0.70),
-    0 4px 12px rgba(0, 0, 0, 0.35);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-}
-
-/* overflow: hidden (needed for the ellipsis) would cut the soft text-shadow into a box; let it paint 16px past the edge. */
-@supports (overflow-clip-margin: 16px) {
-  .player.ui-codeinexo :is(.codeine-title, .codeine-episode) {
-    overflow: clip;
-    overflow-clip-margin: 16px;
-  }
-}
-
-@supports not (overflow-clip-margin: 16px) {
-  .player.ui-codeinexo .codeine-title {
-    padding: 8px 16px 16px;
-    margin: -8px 0 -16px;
-  }
-
-  .player.ui-codeinexo .codeine-episode {
-    padding: 8px 16px 16px;
-    margin: -6px 0 -16px;
-  }
-}
-
-.player.ui-codeinexo .codeine-player-badges {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  max-width: min(760px, 100%);
-  margin-top: 4px;
-  padding: 0 12px;
-  overflow: hidden;
-}
-
-.player.ui-codeinexo .codeine-player-badges .player-badge {
-  background: rgba(0, 0, 0, 0.90);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
 }
 
 /* CodeineXO Seekbar Row: flanking time & buffer fill */
@@ -969,7 +858,6 @@
 }
 .player.ui-codeinexo.pip-mode #codeineNextEpisodeButton,
 .player.ui-codeinexo.pip-mode #codeineTimeLabel,
-.player.ui-codeinexo.pip-mode #codeineFullscreenButton,
 .player.ui-codeinexo.pip-mode #codeineResizeButton,
 .player.ui-codeinexo.pip-mode #codeineSpeedButton,
 .player.ui-codeinexo.pip-mode #codeineStatsButton,
@@ -980,7 +868,6 @@
 .player.ui-codeinexo.pip-mode #codeineEpisodesButton,
 .player.ui-codeinexo.pip-mode #codeineSubtitlesButton,
 .player.ui-codeinexo.pip-mode #codeineAudioButton,
-.player.ui-codeinexo.pip-mode .header-center,
 .player.ui-codeinexo.pip-mode .header-left {
   display: none !important;
 }
@@ -1058,9 +945,6 @@
     width: 64px;
     max-width: 64px;
     margin-left: 4px;
-  }
-  .player.ui-codeinexo .header-center {
-    max-width: calc(100% - 120px);
   }
   .player.ui-codeinexo .codeine-time-label {
     font-size: 12px;

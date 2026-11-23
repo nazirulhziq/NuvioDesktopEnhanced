@@ -36,7 +36,6 @@ const playbackMetadata = document.querySelector(".metadata");
 const streamTitle = document.getElementById("streamTitle");
 const providerName = document.getElementById("providerName");
 const playerBadges = document.getElementById("playerBadges");
-const codeinePlayerBadges = document.getElementById("codeinePlayerBadges");
 const resizeLabel = document.getElementById("resizeLabel");
 const speedLabel = document.getElementById("speedLabel");
 const subtitlesLabel = document.getElementById("subtitlesLabel");
@@ -48,8 +47,6 @@ const videoSettingsButton = document.getElementById("videoSettingsButton");
 const shadersButton = document.getElementById("shadersButton");
 const backButton = document.getElementById("backButton");
 const codeineBackButton = document.getElementById("codeineBackButton");
-const codeineTitle = document.getElementById("codeineTitle");
-const codeineEpisode = document.getElementById("codeineEpisode");
 const codeineToggle = document.getElementById("codeineToggle");
 const codeineToggleIcon = document.getElementById("codeineToggleIcon");
 const codeineVolumeControl = document.getElementById("codeineVolumeControl");
@@ -88,8 +85,6 @@ const playbackStatsCloseBtn = document.getElementById("playbackStatsCloseBtn");
 const playbackStatsContent = document.getElementById("playbackStatsContent");
 const codeineSpeedButton = document.getElementById("codeineSpeedButton");
 const codeineResizeButton = document.getElementById("codeineResizeButton");
-const codeineFullscreenButton = document.getElementById("codeineFullscreenButton");
-const codeineFullscreenIcon = document.getElementById("codeineFullscreenIcon");
 const eyeFilterButton = document.getElementById("eyeFilterButton");
 const codeineEyeFilterButton = document.getElementById("codeineEyeFilterButton");
 const eyeFilterOverlay = document.getElementById("eyeFilterOverlay");
@@ -822,10 +817,8 @@ const syncFullscreenButtons = () => {
   const label = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
   if (fullscreenIcon) setAttr(fullscreenIcon, "href", icon);
   if (openingFullscreenIcon) setAttr(openingFullscreenIcon, "href", icon);
-  if (codeineFullscreenIcon) setAttr(codeineFullscreenIcon, "href", icon);
   if (fullscreenButton) setAttr(fullscreenButton, "aria-label", label);
   if (openingFullscreenButton) setAttr(openingFullscreenButton, "aria-label", label);
-  if (codeineFullscreenButton) setAttr(codeineFullscreenButton, "aria-label", label);
 };
 
 const togglePlayerFullscreen = () => {
@@ -1213,11 +1206,11 @@ const syncTorrentStatsOverlay = suppressed => {
   if (!torrentStatsOverlay) return;
   const showClock = Boolean(state.showPlaybackTimeOverlay && !suppressed);
   const showStats = Boolean(state.showTorrentStatsOverlay && String(state.torrentStatsText || "").trim() && !suppressed);
-  torrentStatsOverlay.hidden = !showClock && !showStats;
+  torrentStatsOverlay.hidden = !showStats;
   if (torrentStatsTimeRow) torrentStatsTimeRow.hidden = !showClock;
   if (torrentStatsText) torrentStatsText.hidden = !showStats;
-  if (!torrentStatsOverlay.hidden) {
-    if (torrentStatsText) torrentStatsText.textContent = String(state.torrentStatsText || "").trim();
+  if (showStats && torrentStatsText) torrentStatsText.textContent = String(state.torrentStatsText).trim();
+  if (showClock) {
     updateStatsTimeRow();
     startStatsClockTick();
   } else {
@@ -1600,7 +1593,6 @@ const renderPlayerBadges = () => {
   };
 
   populate(playerBadges);
-  populate(codeinePlayerBadges);
 };
 
 const setVisible = (element, visible) => {
@@ -4551,8 +4543,7 @@ const syncSkipPromptPlacement = showSkip => {
     skipPrompt.style.getPropertyValue("--skip-prompt-lift"),
   ) || 0);
   let targetLift = 0;
-  const isCodeineUi = root.classList.contains("ui-codeinexo");
-  if (!isCodeineUi && showSkip && state.controlsVisible && (title.textContent || episode.textContent)) {
+  if (showSkip && state.controlsVisible && (title.textContent || episode.textContent)) {
     const rootTop = root.getBoundingClientRect().top;
     const metadataTop = playbackMetadata.getBoundingClientRect().top - rootTop;
     const promptBottom = skipPrompt.offsetTop + skipPrompt.offsetHeight + currentLift;
@@ -4821,11 +4812,8 @@ const renderChrome = () => {
 
   setTextContent(title, state.title || "");
   const parentalGuideUnavailable = !normalizedParentalWarnings().length || Boolean(state.isLocked || state.showParentalGuide);
-  [title, codeineTitle].forEach(button => {
-    if (!button) return;
-    setAttr(button, "aria-disabled", String(parentalGuideUnavailable));
-    button.inert = chromeHidden || showOpening || Boolean(state.isInPip) || (button === title ? isCodeineXo : !isCodeineXo);
-  });
+  setAttr(title, "aria-disabled", String(parentalGuideUnavailable));
+  title.inert = chromeHidden || showOpening || Boolean(state.isInPip);
   setText(episode, state.episodeText);
   setText(streamTitle, state.streamTitle);
   setText(providerName, state.providerName);
@@ -4927,8 +4915,6 @@ const renderChrome = () => {
   }
 
   if (isCodeineXo) {
-    if (codeineTitle) setTextContent(codeineTitle, state.title || "");
-    if (codeineEpisode) setText(codeineEpisode, state.episodeText);
     if (codeineToggle) {
       setAttr(codeineToggle, "aria-label", playPauseLabel || (isPlaying ? "Pause" : "Play"));
     }
@@ -6490,15 +6476,13 @@ const positionQuickMenu = () => {
   const wrapperRect = codeineQuickDrawer.getBoundingClientRect();
   const rootRect = root.getBoundingClientRect();
   const seekRect = document.getElementById("codeineSeekContainer").getBoundingClientRect();
-  const fullscreenRect = document.getElementById("codeineFullscreenButton").getBoundingClientRect();
   const menuBottom = Math.min(wrapperRect.top, seekRect.top) - 12;
-  const rightOffset = wrapperRect.right - fullscreenRect.right;
   codeineDrawerItems.style.bottom = (wrapperRect.bottom - menuBottom) + "px";
-  codeineDrawerItems.style.right = rightOffset + "px";
+  codeineDrawerItems.style.right = "0px";
   codeineDrawerItems.style.setProperty("--quick-menu-max-height", Math.max(0, menuBottom - Math.max(0, rootRect.top) - 12) + "px");
   const menuRect = codeineDrawerItems.getBoundingClientRect();
   const shift = Math.max(0, Math.max(0, rootRect.left) + 12 - menuRect.left) - Math.max(0, menuRect.right - window.innerWidth + 12);
-  codeineDrawerItems.style.right = (rightOffset - shift) + "px";
+  codeineDrawerItems.style.right = (-shift) + "px";
 };
 
 codeineDrawerButton.addEventListener("click", event => {
@@ -7405,8 +7389,12 @@ document.addEventListener("keyup", event => {
 });
 
 document.addEventListener("keydown", event => {
-  if (handleFontPickerKey(event)) return;
   const isBackKey = isPlayerBackKey(event);
+  if (isBackKey && event.repeat) {
+    event.preventDefault();
+    return;
+  }
+  if (handleFontPickerKey(event)) return;
   if (isBackKey && isQuickMenuOpen) {
     event.preventDefault();
     closeQuickMenu();
@@ -7429,6 +7417,8 @@ document.addEventListener("keydown", event => {
     event.preventDefault();
     if (state.isInPip) {
       send("pictureInPicture", 0);
+    } else if (event.key === "Escape" && state.isFullscreen) {
+      send("exitFullscreen", 0);
     } else {
       send("back", 0);
     }
