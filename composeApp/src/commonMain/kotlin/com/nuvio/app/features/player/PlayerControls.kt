@@ -372,6 +372,12 @@ internal fun PlayerControlsShell(
                                 onInteraction()
                                 onScrubFinished(it)
                             },
+                            metrics = metrics,
+                            showRemainingTime = showRemainingTime,
+                            onRuntimeClick = {
+                                onRuntimeClick()
+                                onInteraction()
+                            },
                         )
                         seekPreviewContent?.let { preview ->
                             Box(
@@ -386,9 +392,6 @@ internal fun PlayerControlsShell(
                     }
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
-                        displayedPositionMs = displayedPositionMs,
-                        showRemainingTime = showRemainingTime,
-                        onRuntimeClick = onRuntimeClick,
                         metrics = metrics,
                         resizeMode = resizeMode,
                         onSubtitleClick = onSubtitleClick,

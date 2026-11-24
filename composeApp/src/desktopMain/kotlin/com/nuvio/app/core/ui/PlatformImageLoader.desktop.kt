@@ -5,7 +5,8 @@ import coil3.ImageLoader
 import coil3.memory.MemoryCache
 import kotlinx.coroutines.Dispatchers
 
-private const val ImageMemoryCacheBytes = 256L * 1024 * 1024
+// Desktop bitmaps dominate native RSS: kept at 128 MiB so the Coil cache cannot outgrow the heap.
+private const val ImageMemoryCacheBytes = 128L * 1024 * 1024
 
 /** Bound combined still/animated decode work so image arrivals cannot occupy every CPU worker. */
 internal fun desktopArtworkDecodeParallelism(processors: Int): Int =

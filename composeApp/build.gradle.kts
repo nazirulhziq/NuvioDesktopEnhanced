@@ -1340,6 +1340,12 @@ compose.desktop {
         val smokePlayerUrl = providers.gradleProperty("nuvio.desktop.smokePlayerUrl").orNull
             ?: System.getenv("NUVIO_DESKTOP_SMOKE_PLAYER_URL")
         jvmArgs += listOfNotNull(
+            // Memory-side defaults: cap heap/metaspace and trim duplicate strings so the
+            // desktop build cannot balloon native RSS on 16 GB HTPC boxes. GC stays default (G1).
+            "-Xms256m",
+            "-Xmx2g",
+            "-XX:MaxMetaspaceSize=512m",
+            "-XX:+UseStringDeduplication",
             "-Dapple.awt.application.appearance=NSAppearanceNameDarkAqua",
             // Keep AWT from loading its own GTK (Swing L&F/file dialogs): the
             // bridge owns the process's GTK via initGtkEarly (skoruppa's fix).

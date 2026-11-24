@@ -1746,8 +1746,11 @@ JNIEXPORT jlong JNICALL NP(create)(
         mpv_set_option_string(m, "demuxer-lavf-buffersize", "262144");
         mpv_set_option_string(m, "stream-buffer-size", "524288");
         mpv_set_option_string(m, "stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5,multiple_requests=1");
-        mpv_set_option_string(m, "demuxer-max-bytes", "1073741824");
-        mpv_set_option_string(m, "demuxer-readahead-secs", "36000");
+        // Cap the forward demuxer cache: a streaming client buffers seconds, not
+        // hours. The old 1 GiB / 36000 s let mpv fill and pin ~1 GiB of RSS; 256 MiB
+        // / 120 s still absorbs network jitter without holding a second copy of the media.
+        mpv_set_option_string(m, "demuxer-max-bytes", "268435456");
+        mpv_set_option_string(m, "demuxer-readahead-secs", "120");
         mpv_set_option_string(m, "user-agent", userAgent.c_str());
 
         if (!headerFields.empty()) {

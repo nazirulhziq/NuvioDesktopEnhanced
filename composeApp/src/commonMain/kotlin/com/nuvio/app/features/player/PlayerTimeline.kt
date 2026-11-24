@@ -4,16 +4,20 @@ import com.nuvio.app.core.ui.frostedGlassSecondaryContentColor
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -31,18 +35,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
@@ -113,6 +122,12 @@ internal fun PlayerTimeline(
     enabled: Boolean = true,
     /** Each chapter after the first gets a mark where it starts. */
     chapters: List<PlayerChapter> = emptyList(),
+    /** Layout metrics used to size the end-time label; null keeps the label off. */
+    metrics: PlayerLayoutMetrics? = null,
+    /** Swaps the end-time label between total duration and time remaining. */
+    showRemainingTime: Boolean = false,
+    /** Non-null shows the end-time label, which toggles elapsed/remaining on click. */
+    onRuntimeClick: (() -> Unit)? = null,
 ) {
     val previewInteraction = LocalSeekPreviewInteraction.current
     val previewScope = rememberCoroutineScope()
@@ -142,72 +157,128 @@ internal fun PlayerTimeline(
     sliderState.value = displayedPositionMs.coerceIn(0L, durationMs).toFloat()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Slider(
-            state = sliderState,
-            onValueChange = { value ->
-                val position = value.toLong().coerceIn(0L, durationMs)
-                scrubPosition = position
-                if (previewInteraction?.dragging == false) previewInteraction.keyboard(position, previewScope)
-                onScrubChange(position)
-            },
-            onValueChangeFinished = {
-                val rawTarget = (scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs)
-                val target = if (durationMs > 2000L) rawTarget.coerceAtMost(durationMs - 1500L) else rawTarget
-                onScrubFinished(target)
-                scrubPosition = null
-            },
-            enabled = enabled && durationMs > 0L,
-            interactionSource = interactionSource,
-            thumb = {},
-            track = { state ->
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .drawBehind {
-                            val trackHeight = trackThickness.toPx()
-                            val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
-                            val radius = CornerRadius(trackHeight / 2)
-                            drawRoundRect(
-                                color = Color.White.copy(alpha = 0.3f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                color = accent.copy(alpha = 0.35f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width * bufferedFraction, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                brush = accentBrush,
-                                topLeft = trackOrigin,
-                                size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
-                                cornerRadius = radius,
-                            )
-                            if (durationMs > 0L) {
-                                val markWidth = 2.dp.toPx()
-                                chapters.forEach { chapter ->
-                                    val fraction = chapter.startMs / rangeEnd
-                                    if (fraction <= 0f || fraction >= 1f) return@forEach
-                                    drawRect(
-                                        color = Color.Black.copy(alpha = 0.6f),
-                                        topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
-                                        size = Size(markWidth, trackHeight),
-                                    )
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Slider(
+                state = sliderState,
+                onValueChange = { value ->
+                    val position = value.toLong().coerceIn(0L, durationMs)
+                    scrubPosition = position
+                    if (previewInteraction?.dragging == false) previewInteraction.keyboard(position, previewScope)
+                    onScrubChange(position)
+                },
+                onValueChangeFinished = {
+                    val rawTarget = (scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs)
+                    val target = if (durationMs > 2000L) rawTarget.coerceAtMost(durationMs - 1500L) else rawTarget
+                    onScrubFinished(target)
+                    scrubPosition = null
+                },
+                enabled = enabled && durationMs > 0L,
+                interactionSource = interactionSource,
+                thumb = {},
+                track = { state ->
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .drawBehind {
+                                val trackHeight = trackThickness.toPx()
+                                val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
+                                val radius = CornerRadius(trackHeight / 2)
+                                drawRoundRect(
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width, trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                drawRoundRect(
+                                    color = accent.copy(alpha = 0.35f),
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width * bufferedFraction, trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                drawRoundRect(
+                                    brush = accentBrush,
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                if (durationMs > 0L) {
+                                    val markWidth = 2.dp.toPx()
+                                    chapters.forEach { chapter ->
+                                        val fraction = chapter.startMs / rangeEnd
+                                        if (fraction <= 0f || fraction >= 1f) return@forEach
+                                        drawRect(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
+                                            size = Size(markWidth, trackHeight),
+                                        )
+                                    }
                                 }
-                            }
-                        },
+                            },
+                    )
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .seekPreviewInput(durationMs)
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                    .requiredHeight(48.dp)
+                    .semantics { contentDescription = description },
+            )
+            val runtimeClick = onRuntimeClick
+            if (runtimeClick != null && durationMs > 0L) {
+                TimelineEndTimeLabel(
+                    text = if (showRemainingTime) {
+                        formatPlaybackRuntime(displayedPositionMs, durationMs, true)
+                    } else {
+                        formatPlaybackTime(durationMs)
+                    },
+                    fontSize = metrics?.timeSize ?: 12.sp,
+                    onClickLabel = stringResource(
+                        if (showRemainingTime) Res.string.compose_player_show_elapsed_time else Res.string.compose_player_show_remaining_time,
+                    ),
+                    onClick = runtimeClick,
                 )
-            },
-            modifier = modifier
-                .seekPreviewInput(durationMs)
-                .fillMaxWidth()
-                .height(24.dp)
-                .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                .requiredHeight(48.dp)
-                .semantics { contentDescription = description },
+            }
+        }
+    }
+}
+
+/**
+ * Total duration (or time remaining) parked at the right end of the seek bar. Tapping it flips the
+ * player between elapsed and remaining time; it is deliberately as compact as a small caption so the
+ * track keeps its width.
+ */
+@Composable
+private fun TimelineEndTimeLabel(
+    text: String,
+    fontSize: TextUnit,
+    onClickLabel: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .height(28.dp)
+            .widthIn(min = 52.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick)
+            .padding(start = 6.dp, end = 2.dp),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.nuvioTypeScale.labelSm.copy(
+                fontSize = fontSize,
+                lineHeight = fontSize * 1.25f,
+                fontWeight = FontWeight.Medium,
+            ),
+            color = Color.White.copy(alpha = 0.9f),
+            maxLines = 1,
+            textAlign = TextAlign.End,
         )
     }
 }
