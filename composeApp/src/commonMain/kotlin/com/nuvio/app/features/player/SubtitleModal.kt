@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.ui.FlagText
+
 import com.nuvio.app.core.ui.frostedGlassSecondaryContentColor
 
 import androidx.compose.animation.AnimatedVisibility
@@ -286,6 +288,7 @@ fun SubtitleModal(
                                         val option = keyedOption.value
                                         SubtitleOptionRow(
                                             option = option,
+                                            languageKey = activeLanguageKey,
                                             selected = option.id == selectedOptionId,
                                             onClick = {
                                                 pendingOptionId = option.id
@@ -408,8 +411,9 @@ private fun SubtitleLanguageRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        FlagText(
             text = label,
+            languageKey = item.key,
             modifier = Modifier.weight(1f, fill = false),
             color = if (selected) tokens.colors.onAccent else Color.White,
             style = MaterialTheme.typography.bodyLarge,
@@ -437,6 +441,7 @@ private fun SubtitleLanguageRow(
 @Composable
 private fun SubtitleOptionRow(
     option: SubtitleSelectionOption,
+    languageKey: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -500,8 +505,9 @@ private fun SubtitleOptionRow(
                     AutoSyncedChip(it.subtitle.url, selected) // AutoSync hook
                 }
             }
-            Text(
+            FlagText(
                 text = title,
+                languageKey = languageKey,
                 color = if (selected) tokens.colors.onAccent else Color.White,
                 style = MaterialTheme.typography.bodyLarge,
             )

@@ -741,7 +741,7 @@ private fun MobileSettingsScreen(
                     }
                 }
                 SettingsPage.Account -> accountSettingsContent(
-                    isTablet = false,
+                    onSwitchProfile = onSwitchProfile,
                 )
                 SettingsPage.CodeineXO -> codeineXOSettingsContent(
                     isTablet = false,
@@ -1166,7 +1166,7 @@ private fun TabletSettingsScreen(
                                     }
                                 }
                                 SettingsPage.Account -> accountSettingsContent(
-                                    isTablet = true,
+                                    onSwitchProfile = onSwitchProfile,
                                 )
                                 SettingsPage.CodeineXO -> codeineXOSettingsContent(
                                     isTablet = true,

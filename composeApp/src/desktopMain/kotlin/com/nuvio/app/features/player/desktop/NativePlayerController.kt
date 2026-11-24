@@ -243,6 +243,8 @@ internal class NativePlayerController(
     private var currentVolumeLevel = rememberedVolumeLevel.coerceDesktopPlayerVolumeLevel()
     private var pendingSubtitleDelayMs: Int? = null
     private var pendingSubtitleStyle: SubtitleStyleState? = null
+    @Volatile private var subtitleChromeClearance = 0
+    private var applySecondaryAppearance: ((Long) -> Unit)? = null
     private var pendingUseLibass: Boolean = false
     private var mediaContentType: MediaContentType = MediaContentType.UNKNOWN
     private var animeUpscalerOption: AnimeUpscalerOption = AnimeUpscalerOption.OFF
@@ -1093,6 +1095,13 @@ internal class NativePlayerController(
             }
             "audio_night_filter_error" -> {
                 showMpvNotice(handle) { getString(Res.string.settings_playback_mpv_night_filter_error) }
+            }
+            "subtitleChromeClearance" -> {
+                subtitleChromeClearance = value.toInt().coerceIn(0, 100)
+                executePlayerCommand { current ->
+                    pendingSubtitleStyle?.let { applySubtitleStyle(current, it, pendingUseLibass) }
+                    applySecondaryAppearance?.invoke(current)
+                }
             }
             "cursorActivity" -> host.noteCursorActivity()
             "scrubChange" -> {
@@ -1961,10 +1970,13 @@ internal class NativePlayerController(
             append(style.outlineColor.toAssColorTags(3))
             append(outline.shadowColor.toAssColorTags(4))
         }
-        executePlayerCommand { current ->
-            val boxTags = if (outline.boxColor.alpha > 0f) outline.boxColor.toAssColorTags(1) else ""
-            NativePlayerBridge.setSecondarySubtitleStyle(current, tags, boxTags, fontsDir, style.bottomOffset, delayMs, useLibass)
+        val boxTags = if (outline.boxColor.alpha > 0f) outline.boxColor.toAssColorTags(1) else ""
+        val apply: (Long) -> Unit = { current ->
+            NativePlayerBridge.setSecondarySubtitleStyle(current, tags, boxTags, fontsDir,
+                liftedSubtitleOffset(style.bottomOffset, subtitleChromeClearance), delayMs, useLibass)
         }
+        applySecondaryAppearance = apply
+        executePlayerCommand(apply)
     }
 
     override fun setSubtitleUri(url: String) {
@@ -2131,7 +2143,7 @@ internal class NativePlayerController(
             outlineSize = resolvedOutlineSize,
             bold = style.bold,
             fontSize = style.toMpvSubtitleFontSize(),
-            subPos = style.toMpvSubtitlePosition(),
+            subPos = (100 - liftedSubtitleOffset(style.bottomOffset, subtitleChromeClearance) / 2).coerceIn(0, 150),
             useLibass = applyLibass,
             stripSdh = style.stripSdh,
         )
@@ -2371,9 +2383,6 @@ private fun Color.toMpvColorString(): String {
         append(blueInt.toHexByte())
     }
 }
-
-private fun SubtitleStyleState.toMpvSubtitlePosition(): Int =
-    (100 - (bottomOffset / 2)).coerceIn(0, 150)
 
 private fun SubtitleStyleState.toMpvSubtitleFontSize(): Float =
     (fontSizeSp * 3f).coerceIn(18f, 96f)

@@ -745,7 +745,7 @@ button:disabled {
 .skip-prompt {
   position: absolute;
   left: var(--hp);
-  bottom: calc(var(--overlay-bottom) + var(--skip-prompt-lift, 0px) + env(safe-area-inset-bottom));
+  bottom: max(calc(var(--overlay-bottom) + env(safe-area-inset-bottom)), var(--prompt-clearance, 0px));
   z-index: 7;
   min-width: max-content;
   display: flex;
@@ -767,13 +767,6 @@ button:disabled {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
-}
-
-.skip-prompt.lift-down {
-  transition:
-    opacity 300ms ease,
-    transform 300ms var(--ease-out),
-    bottom var(--motion-panel) var(--ease-out);
 }
 
 .skip-prompt-row {
@@ -1989,6 +1982,14 @@ button:disabled {
   flex: none;
   font-size: 12px;
   color: var(--theme-text-muted);
+}
+
+.timeline-duration {
+  align-self: flex-end;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 
 .time-row {
@@ -5185,4 +5186,8 @@ svg {
 }
 
 .track-label { display: flex; align-items: center; }
-.track-flag { width: 18px; height: 13px; border-radius: 2px; object-fit: cover; margin-inline-end: 8px; flex: 0 0 auto; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.language-flag {
+  display: inline-block; width: 20px; height: 15px; vertical-align: -2px; flex: none;
+  border-radius: 2px; background: url("language-flags.png") no-repeat; background-size: 520px 390px;
+}
+.track-label > .language-flag, .subtitle-option-title > .language-flag { margin-inline-end: 8px; }

@@ -23,6 +23,8 @@ internal actual object LiveTvStorage {
     private const val epgAutoDetectKey = "live_tv_epg_auto_detect"
 
     private val store = DesktopStorage.store("nuvio_live_tv_settings")
+    actual fun loadAddonSources(key: String): Set<String> = store.getStringSet(key).orEmpty()
+    actual fun saveAddonSources(key: String, sources: Set<String>) = store.putStringSet(key, sources)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     actual fun loadPlaylistUrl(): String? = store.getString(playlistUrlKey)

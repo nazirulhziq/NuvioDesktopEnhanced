@@ -1,6 +1,8 @@
 package com.nuvio.app.features.livetv
 
 internal expect object LiveTvStorage {
+    fun loadAddonSources(key: String): Set<String>
+    fun saveAddonSources(key: String, sources: Set<String>)
     fun loadPlaylistUrl(): String?
     fun savePlaylistUrl(url: String)
     fun loadPlaylistsBlob(): String?

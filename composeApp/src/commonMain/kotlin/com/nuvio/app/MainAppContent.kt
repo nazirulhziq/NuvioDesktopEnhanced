@@ -72,6 +72,7 @@ import com.nuvio.app.core.ui.collectMappedAsState
 import com.nuvio.app.navigation.PosterNavigationState
 import com.nuvio.app.navigation.posterNavigationEntry
 import com.nuvio.app.navigation.pageNavigationMotion
+import com.nuvio.app.features.livetv.toPlayerLaunch
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.auth.DeviceSessionRegistration
@@ -1166,6 +1167,11 @@ internal fun MainAppContent(
             }
         }
 
+        suspend fun openLiveTvPlayer(launch: PlayerLaunch) {
+            if (externalPlayerSupported && playerSettingsUiState.externalPlayerEnabled) openExternalPlayback(launch)
+            else navController.navigate(PlayerRoute(PlayerLaunchStore.put(launch), launch.title))
+        }
+
         fun launchPlaybackWithDownloadPreference(
             type: String,
             videoId: String,
@@ -1840,6 +1846,27 @@ internal fun MainAppContent(
                         },
                         actions = { isTabletLayout ->
                             AppTabActions(
+                                onLiveTvCatalogClick = { catalog ->
+                                    val launch = CatalogLaunch(catalog.title, catalog.addonName, catalog.target, liveTvProfileId = activePlaybackProfileId)
+                                    navController.navigate(CatalogRoute(CatalogLaunchStore.put(launch), catalog.title, catalog.addonName))
+                                },
+                                onLiveTvChannelClick = { channel ->
+                                    coroutineScope.launch {
+                                        val prepared = try {
+                                            com.nuvio.app.features.livetv.LiveTvRepository.prepareForPlayback(channel)
+                                        } catch (cancel: kotlinx.coroutines.CancellationException) {
+                                            throw cancel
+                                        } catch (_: Exception) {
+                                            NuvioToastController.show(playbackUnavailableMessage)
+                                            return@launch
+                                        }
+                                        if (prepared.streamUrl.isBlank()) NuvioToastController.show(playbackUnavailableMessage)
+                                        else openLiveTvPlayer(prepared.toPlayerLaunch(activePlaybackProfileId))
+                                    }
+                                },
+                                onLiveTvVodClick = { vod ->
+                                    coroutineScope.launch { openLiveTvPlayer(vod.toPlayerLaunch(activePlaybackProfileId)) }
+                                },
                                 onCatalogClick = onCatalogClick,
                                 onPosterClick = navController::openPreview,
                                 onPosterLongClick = { meta ->
@@ -2137,6 +2164,7 @@ internal fun MainAppContent(
                 entry<SettingsPageRoute> { route ->
                     SettingsRootDestination(
                         route = route,
+                        onSwitchProfile = onSwitchProfile,
                         navController = navController,
                         useNativeNavigation = useNativeNavigation,
                         collectionsTitle = collectionsTitle,
@@ -2186,7 +2214,7 @@ internal fun MainAppContent(
                 }
                 entry<AccountSettingsRoute> { route ->
                     SettingsDestination(route, navController) { onBack ->
-                        AccountSettingsScreen(onBack = onBack)
+                        AccountSettingsScreen(onBack = onBack, onSwitchProfile = onSwitchProfile)
                     }
                 }
                 entry<SupportersContributorsSettingsRoute> { route ->

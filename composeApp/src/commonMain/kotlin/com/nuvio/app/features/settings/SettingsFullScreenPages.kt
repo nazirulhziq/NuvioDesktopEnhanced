@@ -245,6 +245,7 @@ fun PluginsSettingsScreen(
 @Composable
 fun AccountSettingsScreen(
     onBack: () -> Unit,
+    onSwitchProfile: () -> Unit,
 ) {
     val auraBackgroundEnabled by ThemeSettingsRepository.auraBackgroundEnabled.collectAsStateWithLifecycle()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -264,7 +265,7 @@ fun AccountSettingsScreen(
                 )
             }
             accountSettingsContent(
-                isTablet = false,
+                onSwitchProfile = onSwitchProfile,
             )
         }
     }

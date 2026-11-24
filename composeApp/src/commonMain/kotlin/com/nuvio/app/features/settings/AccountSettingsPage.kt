@@ -28,7 +28,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.auth.AuthRepository
-import com.nuvio.app.core.auth.AuthState
+import com.nuvio.app.features.profiles.ProfileRepository
+import androidx.compose.runtime.key
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioStatusModal
@@ -44,36 +45,48 @@ import nuvio.composeapp.generated.resources.settings_account_delete_account
 import nuvio.composeapp.generated.resources.settings_account_delete_account_description
 import nuvio.composeapp.generated.resources.settings_account_delete_confirm_message
 import nuvio.composeapp.generated.resources.settings_account_delete_confirm_title
+import nuvio.composeapp.generated.resources.compose_settings_root_switch_profile_title
+import nuvio.composeapp.generated.resources.account_checking_login
+import nuvio.composeapp.generated.resources.account_guest_local
+import nuvio.composeapp.generated.resources.account_active_profile
+import nuvio.composeapp.generated.resources.account_profile_count
+import nuvio.composeapp.generated.resources.account_profiles_heading
+import nuvio.composeapp.generated.resources.account_signout_local_warning
 import nuvio.composeapp.generated.resources.settings_account_email
 import nuvio.composeapp.generated.resources.settings_account_not_signed_in
 import nuvio.composeapp.generated.resources.settings_account_sign_out
-import nuvio.composeapp.generated.resources.settings_account_sign_out_confirm_message
 import nuvio.composeapp.generated.resources.settings_account_sign_out_confirm_title
 import nuvio.composeapp.generated.resources.settings_account_status
-import nuvio.composeapp.generated.resources.settings_account_status_anonymous
 import nuvio.composeapp.generated.resources.settings_account_status_signed_in
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.accountSettingsContent(
-    isTablet: Boolean,
+    onSwitchProfile: (() -> Unit)?,
 ) {
     item {
-        AccountSettingsBody(isTablet = isTablet)
+        val authState by AuthRepository.state.collectAsStateWithLifecycle()
+        val profiles by ProfileRepository.state.collectAsStateWithLifecycle()
+        val overview = authState.accountOverview(
+            profileOwner = profiles.activeProfile?.userId,
+            profileName = profiles.activeProfile?.name,
+            loadedProfileOwners = profiles.profiles.takeIf { profiles.isLoaded }?.map { it.userId },
+        )
+        key(authState) { AccountSettingsBody(overview, onSwitchProfile) }
     }
 }
 
 @Composable
 private fun AccountSettingsBody(
-    isTablet: Boolean,
+    overview: AccountOverview,
+    onSwitchProfile: (() -> Unit)?,
 ) {
-    val authState by AuthRepository.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     var deleteErrorMessage by remember { mutableStateOf<String?>(null) }
     val deleteAccountFallbackMessage = stringResource(Res.string.auth_account_deletion_failed)
-    val canDeleteAccount = AppFeaturePolicy.accountDeletionEnabled && authState is AuthState.Authenticated
+    val canDeleteAccount = overview.canDelete(AppFeaturePolicy.accountDeletionEnabled)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         NuvioSurfaceCard {
@@ -85,39 +98,44 @@ private fun AccountSettingsBody(
             )
             Spacer(modifier = Modifier.height(14.dp))
 
-            when (val state = authState) {
-                is AuthState.Authenticated -> {
-                    AccountInfoRow(
-                        label = stringResource(Res.string.settings_account_status),
-                        value = if (state.isAnonymous) {
-                            stringResource(Res.string.settings_account_status_anonymous)
-                        } else {
-                            stringResource(Res.string.settings_account_status_signed_in)
-                        },
-                        valueColor = MaterialTheme.colorScheme.primary,
-                    )
-                    state.email?.takeUnless { state.isAnonymous }?.let { email ->
-                        Spacer(modifier = Modifier.height(8.dp))
-                        AccountInfoRow(
-                            label = stringResource(Res.string.settings_account_email),
-                            value = email,
-                        )
-                    }
-                }
-                else -> {
-                    Text(
-                        text = stringResource(Res.string.settings_account_not_signed_in),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            AccountInfoRow(
+                label = stringResource(Res.string.settings_account_status),
+                value = stringResource(when (overview.login) {
+                    AccountLogin.Loading -> Res.string.account_checking_login
+                    AccountLogin.SignedOut -> Res.string.settings_account_not_signed_in
+                    AccountLogin.Guest -> Res.string.account_guest_local
+                    AccountLogin.SignedIn -> Res.string.settings_account_status_signed_in
+                }),
+            )
+            overview.email?.let { email ->
+                Spacer(Modifier.height(8.dp))
+                AccountInfoRow(stringResource(Res.string.settings_account_email), email)
             }
         }
 
-        NuvioPrimaryButton(
-            text = stringResource(Res.string.settings_account_sign_out),
-            onClick = { showSignOutConfirm = true },
-        )
+        if (overview.canSignOut) {
+            if (overview.profileName != null || overview.profileCount != null || onSwitchProfile != null) {
+                NuvioSurfaceCard {
+                    Text(stringResource(Res.string.account_profiles_heading), style = MaterialTheme.typography.titleMedium)
+                    overview.profileName?.let {
+                        Spacer(Modifier.height(8.dp))
+                        AccountInfoRow(stringResource(Res.string.account_active_profile), it)
+                    }
+                    overview.profileCount?.let {
+                        Spacer(Modifier.height(8.dp))
+                        AccountInfoRow(stringResource(Res.string.account_profile_count), it.toString())
+                    }
+                    onSwitchProfile?.let {
+                        Spacer(Modifier.height(12.dp))
+                        NuvioPrimaryButton(text = stringResource(Res.string.compose_settings_root_switch_profile_title), onClick = it)
+                    }
+                }
+            }
+            NuvioPrimaryButton(
+                text = stringResource(Res.string.settings_account_sign_out),
+                onClick = { showSignOutConfirm = true },
+            )
+        }
 
         if (canDeleteAccount) {
             DeleteAccountCard(
@@ -132,7 +150,7 @@ private fun AccountSettingsBody(
 
     NuvioStatusModal(
         title = stringResource(Res.string.settings_account_sign_out_confirm_title),
-        message = stringResource(Res.string.settings_account_sign_out_confirm_message),
+        message = stringResource(Res.string.account_signout_local_warning),
         isVisible = showSignOutConfirm,
         confirmText = stringResource(Res.string.settings_account_sign_out),
         dismissText = stringResource(Res.string.action_cancel),
@@ -161,9 +179,7 @@ private fun AccountSettingsBody(
                 deleteErrorMessage = if (result.isSuccess) {
                     null
                 } else {
-                    AuthRepository.error.value
-                        ?: result.exceptionOrNull()?.message
-                        ?: deleteAccountFallbackMessage
+                    deleteAccountFallbackMessage
                 }
             }
         },

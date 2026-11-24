@@ -284,7 +284,7 @@ internal fun MainTabsDestination(
             },
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                val requiresNavBarHaze = if (useDesktopTopBar || useDesktopSidebar) {
+                val requiresNavBarHaze = if (useDesktopBottomDock || useDesktopTopBar || useDesktopSidebar) {
                     true
                 } else if (isTabletLayout) {
                     useFloatingTopBar
@@ -308,7 +308,7 @@ internal fun MainTabsDestination(
                         shuffleSelected = randomPickerSelected,
                         // Poster and settings pages share a full-window background, without a rectangle at the sidebar inset.
                         // Each tab draws it inside its own pane so it fades with that tab rather than vanishing at the switch.
-                        paneBackground = { tabKey -> if (isDesktop) TabPaneBackground(tabKey, navBarHazeState, searchBackdropState) },
+                        paneBackground = { tabKey -> if (isDesktop) TabPaneBackground(tabKey, searchBackdropState) },
                         shuffleContent = if (randomPickerContent != null) { {
                             Box(Modifier.fillMaxSize().padding(start = contentStartPadding)
                                 .padding(LocalVerticalBarPadding.current)) { randomPickerContent() }
@@ -442,6 +442,10 @@ internal fun MainTabsDestination(
                 if (useDesktopBottomDock) {
                     DesktopNavigationBar(
                         modifier = Modifier.align(Alignment.BottomCenter),
+                        navBarStyle = navBarStyleSetting,
+                        windowWidth = screenWidth,
+                        isHeroEnabled = homeCatalogSettingsUiState.heroEnabled || homeAppInterface == AppInterface.PersistentHero,
+                        keepTransparentOnScroll = homeAppInterface == AppInterface.PersistentHero,
                         scrollState = navBarScrollState,
                         hazeState = navBarHazeState,
                         contentPadding = floatingNavigationBarPadding(),
@@ -475,14 +479,13 @@ internal fun usesSharedTabBackground(selectedTab: AppScreenTab, shuffleSelected:
 
 /** The shared poster/settings background, drawn per pane; Home paints its own backdrop and gets none. */
 @Composable
-private fun TabPaneBackground(tabKey: String, navBarHazeState: HazeState, searchBackdropState: HazeState) {
+private fun TabPaneBackground(tabKey: String, searchBackdropState: HazeState) {
     val shuffle = tabKey == "Shuffle"
     val tab = if (shuffle) AppScreenTab.Home else AppScreenTab.fromName(tabKey)
     if (!usesSharedTabBackground(tab, shuffle)) return
     val auraBackgroundEnabled by ThemeSettingsRepository.auraBackgroundEnabled.collectAsStateWithLifecycle()
     val frostedGlass = LocalFrostedGlassEnabled.current
     val backgroundModifier = Modifier.fillMaxSize()
-        .then(if (frostedGlass) Modifier.hazeSource(navBarHazeState, zIndex = -1f) else Modifier)
         .then(if (frostedGlass && tab == AppScreenTab.Search && !shuffle) Modifier.hazeSource(searchBackdropState, zIndex = -1f) else Modifier)
     if (auraBackgroundEnabled) {
         HomeInteractiveGradientBackground(modifier = backgroundModifier)

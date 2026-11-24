@@ -97,6 +97,7 @@ import nuvio.composeapp.generated.resources.live_tv_no_matching_channels_title
 import nuvio.composeapp.generated.resources.live_tv_no_playlist_message
 import nuvio.composeapp.generated.resources.live_tv_no_playlist_title
 import nuvio.composeapp.generated.resources.live_tv_search_placeholder
+import nuvio.composeapp.generated.resources.live_tv_addon_catalogs
 import nuvio.composeapp.generated.resources.live_tv_title
 import nuvio.composeapp.generated.resources.live_tv_action_clear_recents
 import nuvio.composeapp.generated.resources.live_tv_action_search
@@ -144,6 +145,7 @@ fun LiveTvScreen(
     modifier: Modifier = Modifier,
     scrollToTopRequests: Flow<Unit> = emptyFlow(),
     onChannelClick: (LiveTvChannel) -> Unit,
+    onAddonCatalogClick: (LiveTvAddonCatalog) -> Unit,
     onVodClick: (LiveTvVodPlayback) -> Unit = {},
 ) {
     val uiState by remember {
@@ -415,7 +417,7 @@ fun LiveTvScreen(
     val searchAvailable = when (section) {
         LiveTvSection.Channels, LiveTvSection.Guide -> showChannelControls
         LiveTvSection.OnDemand -> hasVodProvider
-        LiveTvSection.Sports -> false
+        LiveTvSection.Sports, LiveTvSection.Addons -> false
     }
         NuvioScreen(
             modifier = Modifier.fillMaxSize(),
@@ -465,12 +467,13 @@ fun LiveTvScreen(
                                     },
                                 )
                             }
-                            if (uiState.hasPlaylist) {
+                            if (uiState.hasPlaylist && section != LiveTvSection.Addons) {
                                 NuvioIconActionButton(
                                     icon = Icons.Rounded.Refresh,
                                     contentDescription = stringResource(Res.string.action_retry),
                                     onClick = {
                                         when (section) {
+                                            LiveTvSection.Addons -> Unit
                                             LiveTvSection.Channels -> LiveTvRepository.refresh()
                                             LiveTvSection.Guide -> LiveTvRepository.reloadEpg()
                                             LiveTvSection.Sports -> LiveTvSportsRepository.refresh()
@@ -481,18 +484,17 @@ fun LiveTvScreen(
                             }
                         },
                     )
-                    if (uiState.hasPlaylist) {
-                        LiveTvSectionTabs(
-                            selected = section,
-                            onSelected = { selected ->
-                                if (selected != section) {
-                                    searchQuery = ""
-                                    isSearchVisible = false
-                                    section = selected
-                                }
-                            },
-                        )
-                    }
+                    LiveTvSectionTabs(
+                        hasPlaylist = uiState.hasPlaylist,
+                        selected = section,
+                        onSelected = { selected ->
+                            if (selected != section) {
+                                searchQuery = ""
+                                isSearchVisible = false
+                                section = selected
+                            }
+                        },
+                    )
                     if (showChannelControls &&
                         (section == LiveTvSection.Channels || section == LiveTvSection.Guide)
                     ) {
@@ -574,7 +576,9 @@ fun LiveTvScreen(
                 }
             }
 
-            if (uiState.hasPlaylist && section == LiveTvSection.Guide && uiState.channels.isNotEmpty()) {
+            if (section == LiveTvSection.Addons) {
+                item { LiveTvAddonSection(onAddonCatalogClick) }
+            } else if (uiState.hasPlaylist && section == LiveTvSection.Guide && uiState.channels.isNotEmpty()) {
                 when {
                     guideChannels.isNotEmpty() -> liveTvGuideRows(
                         channels = guideChannels,
@@ -927,6 +931,7 @@ private fun LiveTvChannelGridCell(
 
 @Composable
 private fun LiveTvSectionTabs(
+    hasPlaylist: Boolean,
     selected: LiveTvSection,
     onSelected: (LiveTvSection) -> Unit,
 ) {
@@ -939,7 +944,7 @@ private fun LiveTvSectionTabs(
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LiveTvSection.entries.forEach { item ->
+        LiveTvSection.entries.filter { hasPlaylist || it == LiveTvSection.Channels || it == LiveTvSection.Addons }.forEach { item ->
             val isSelected = item == selected
             Column(
                 modifier = Modifier
@@ -1580,6 +1585,7 @@ private enum class LiveTvSection(val label: StringResource) {
     Guide(Res.string.live_tv_section_guide),
     Sports(Res.string.live_tv_section_sports),
     OnDemand(Res.string.live_tv_section_on_demand),
+    Addons(Res.string.live_tv_addon_catalogs),
 }
 
 private data class LiveTvChannelChipCounts(

@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import com.nuvio.app.core.ui.FlagText
 import com.nuvio.app.core.ui.LocalSurfaceStyle
 import com.nuvio.app.core.ui.DarkGlassSurfaceColor
 import com.nuvio.app.features.settings.SurfaceStyle
@@ -225,8 +226,8 @@ internal fun StreamCard(
             val subtitle = stream.streamSubtitle
             if (!subtitle.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
-                StreamSubtitleText(
-                    subtitle = subtitle,
+                FlagText(
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                     color = detailColor,
                 )
@@ -356,7 +357,7 @@ private fun StreamNameWithInstantService(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        FlagText(
             text = stream.streamLabel,
             modifier = Modifier.weight(1f, fill = false),
             style = nameStyle,
@@ -412,71 +413,4 @@ private fun StreamItem.instantServiceLabel(): String? {
         .ifBlank { status.providerName.trim() }
         .ifBlank { DebridProviders.displayName(status.providerId) }
     return "- $providerLabel Instant"
-}
-
-private val StreamLanguageCodePattern = Regex("^[A-Za-z]{2}(?:\\s*[/,|·]\\s*[A-Za-z]{2})*$")
-
-/** Returns country codes when the line is nothing but language codes ("GB / PL", "GB/IT"). */
-internal fun parseStreamLanguageCodes(text: String): List<String>? {
-    val trimmed = text.trim()
-    if (!StreamLanguageCodePattern.matches(trimmed)) return null
-    return trimmed.split('/', ',', '|', '·')
-        .map { it.trim().lowercase() }
-        .filter { it.length == 2 }
-        .distinct()
-        .takeIf { it.isNotEmpty() }
-}
-
-@Composable
-internal fun StreamLanguageFlags(codes: List<String>, modifier: Modifier = Modifier) {
-    androidx.compose.foundation.layout.Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        codes.forEach { code ->
-            AsyncImage(
-                model = "https://flagcdn.com/24x18/" + code + ".png",
-                contentDescription = code.uppercase(),
-                modifier = Modifier
-                    .width(18.dp)
-                    .height(13.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                contentScale = ContentScale.Crop,
-            )
-        }
-    }
-}
-
-private val StreamLanguageRunRegex = Regex("([A-Za-z]{2}(?:\\s*[/|,]\\s*[A-Za-z]{2})+)")
-
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-internal fun StreamSubtitleText(
-    subtitle: String,
-    style: androidx.compose.ui.text.TextStyle,
-    color: androidx.compose.ui.graphics.Color,
-) {
-    androidx.compose.foundation.layout.Column {
-        subtitle.split('\n').forEach { line ->
-            val parts = line.split(StreamLanguageRunRegex)
-            if (parts.size == 1) {
-                if (line.isNotBlank()) Text(text = line, style = style, color = color)
-            } else {
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    parts.forEach { part ->
-                        val codes = parseStreamLanguageCodes(part)
-                        if (codes != null) {
-                            StreamLanguageFlags(codes = codes)
-                        } else if (part.isNotBlank()) {
-                            Text(text = part.trim(), style = style, color = color)
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

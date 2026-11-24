@@ -7,6 +7,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.nuvio.app.features.catalog.CatalogScreen
 import com.nuvio.app.features.catalog.CatalogTarget
+import com.nuvio.app.features.livetv.liveTvStreamLaunch
+import com.nuvio.app.features.streams.StreamLaunchStore
+import com.nuvio.app.navigation.StreamRoute
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.toLibraryItem
 import com.nuvio.app.features.servers.ServerCatalog
@@ -19,6 +22,7 @@ internal data class CatalogLaunch(
     val subtitle: String,
     val target: CatalogTarget,
     val heroPreview: MetaPreview? = null,
+    val liveTvProfileId: Int? = null,
 )
 
 internal object CatalogLaunchStore {
@@ -70,7 +74,11 @@ internal fun CatalogDestination(
         initialHeroPreview = launch.heroPreview,
         launchId = route.launchId,
         onBack = onBack,
-        onPosterClick = navController::openPreview,
+        onPosterClick = { meta ->
+            val stream = launch.liveTvProfileId?.let { meta.liveTvStreamLaunch(it) }
+            if (stream == null) navController.openPreview(meta)
+            else navController.navigate(StreamRoute(StreamLaunchStore.put(stream), meta.name))
+        },
         onPosterLongClick = { meta: MetaPreview ->
             onPosterLongClick(
                 if (target is CatalogTarget.Library) {

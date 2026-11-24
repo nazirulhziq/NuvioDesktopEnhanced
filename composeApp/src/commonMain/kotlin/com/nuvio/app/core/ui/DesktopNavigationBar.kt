@@ -9,9 +9,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.nuvio.app.core.ui.collectIsRemoteHoveredAsState
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,9 +26,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,11 +59,12 @@ internal fun DesktopNavigationBar(
 ) {
     if (items.isEmpty()) return
     val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsRemoteHoveredAsState()
+
     // Mouse hover must drive the expansion even when the remote-navigation session
     // has marked the cursor as hidden; otherwise the dock only opens on scroll/click.
     val isPointerHovered by interactionSource.collectIsHoveredAsState()
-    val isAnyHovered = isHovered || isPointerHovered
+    var hasDockFocus by remember { mutableStateOf(false) }
+    val keyboardFocus = hasDockFocus && isRemoteKeyboardNavigationActive
     val isHomeSelected = items.first().selected
     val isSettingsSelected = items.last().selected
     val isScrolledAwayFromTop by remember(scrollState, isSettingsSelected) {
@@ -67,14 +72,10 @@ internal fun DesktopNavigationBar(
             (scrollState?.totalScrollOffset ?: 0f) > if (isSettingsSelected) 70f else 35f
         }
     }
-    val isFrosted = isAnyHovered || profileSwitcherOpen ||
+    val isFrosted = isPointerHovered || keyboardFocus || profileSwitcherOpen ||
         ((isHomeSelected || isSettingsSelected) && isScrolledAwayFromTop &&
             !(isHomeSelected && keepTransparentOnScroll))
-    val labelFraction by animateFloatAsState(
-        targetValue = desktopNavigationLabelFraction(navBarStyle, isHomeSelected, isHeroEnabled, isAnyHovered, profileSwitcherOpen, isScrolledAwayFromTop, scrollCollapsed = scrollState?.labelVisibility == 0f),
-        animationSpec = tween(320, easing = FastOutSlowInEasing),
-        label = "desktop_nav_labels",
-    )
+
     val glassElevation by animateFloatAsState(
         targetValue = if (LocalFrostedGlassEnabled.current && isFrosted) 6f else 0f,
         animationSpec = tween(320),
@@ -95,13 +96,17 @@ internal fun DesktopNavigationBar(
         contentAlignment = Alignment.TopCenter,
     ) {
         val viewportWidth = windowWidth ?: maxWidth
-        val iconSize = when {
-            viewportWidth < 800.dp -> 26.dp
-            viewportWidth > 1600.dp -> 30.dp
-            else -> 28.dp
-        }
         val trackHeight = desktopTopBarHeight(viewportWidth)
-        val trackWidth = ((trackHeight + 64.dp * labelFraction) * items.size + 8.dp).coerceAtMost(maxWidth)
+        val iconSize = trackHeight - 20.dp
+        val labelFraction by animateFloatAsState(
+            targetValue = desktopNavigationLabelFraction(navBarStyle, isHomeSelected, isHeroEnabled,
+                isPointerHovered, profileSwitcherOpen, isScrolledAwayFromTop,
+                scrollCollapsed = scrollState?.labelVisibility == 0f, keyboardFocus = keyboardFocus,
+                labelsFit = desktopDockLabelsFit(maxWidth, items.size, trackHeight)),
+            animationSpec = tween(320, easing = FastOutSlowInEasing),
+            label = "desktop_nav_labels",
+        )
+        val trackWidth = desktopDockWidth(maxWidth, items.size, trackHeight, labelFraction)
         CompositionLocalProvider(
             LocalRemoteNavigationRole provides RemoteNavigationRole.TopBar,
             LocalRemoteRoute provides navigationRoute,
@@ -113,7 +118,8 @@ internal fun DesktopNavigationBar(
             surfaceShadowElevation = glassElevation.dp,
             horizontalLabels = true,
             iconSize = iconSize,
-            modifier = Modifier.width(trackWidth).height(trackHeight).hoverable(interactionSource),
+            modifier = Modifier.width(trackWidth).height(trackHeight).hoverable(interactionSource)
+                .onFocusChanged { hasDockFocus = it.hasFocus }.focusGroup(),
         ) {
             val pillShape = RoundedCornerShape(50)
             Box(
@@ -140,6 +146,14 @@ internal fun DesktopNavigationBar(
     }
 }
 
+// Row has 4dp insets on either end. Reserve at least 32dp beyond each icon slot
+// before showing adaptive labels, rather than squeezing every label to an ellipsis.
+internal fun desktopDockLabelsFit(available: Dp, count: Int, height: Dp): Boolean =
+    available >= (height + 32.dp) * count + 8.dp
+
+internal fun desktopDockWidth(available: Dp, count: Int, height: Dp, fraction: Float): Dp =
+    ((height + 64.dp * fraction) * count + 8.dp).coerceAtMost(available)
+
 internal fun desktopNavigationLabelFraction(
     style: NavBarStyle,
     isHomeSelected: Boolean,
@@ -148,11 +162,14 @@ internal fun desktopNavigationLabelFraction(
     profileSwitcherOpen: Boolean,
     isScrolledAwayFromTop: Boolean,
     scrollCollapsed: Boolean = false,
+    keyboardFocus: Boolean = false,
+    labelsFit: Boolean = true,
 ): Float = when (style) {
     NavBarStyle.EXPANDED -> 1f
     NavBarStyle.COMPACT -> 0f
     else -> when {
-        isHovered || profileSwitcherOpen -> 1f
+        !labelsFit -> 0f
+        isHovered || keyboardFocus || profileSwitcherOpen -> 1f
         scrollCollapsed -> 0f
         isHomeSelected && isHeroEnabled -> 0f
         isHomeSelected && isScrolledAwayFromTop -> 0f

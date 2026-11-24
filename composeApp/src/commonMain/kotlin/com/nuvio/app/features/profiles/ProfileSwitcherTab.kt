@@ -2,6 +2,7 @@ package com.nuvio.app.features.profiles
 
 import com.nuvio.app.core.ui.AppPopup
 
+import com.nuvio.app.dockAvatarTarget
 import com.nuvio.app.isDesktop
 
 import com.nuvio.app.core.ui.remoteNavigationTarget
@@ -286,7 +287,7 @@ fun ProfileSwitcherTab(
             triggerContent(selected)
         } else {
             androidx.compose.foundation.layout.Box(
-                modifier = androidx.compose.ui.Modifier.graphicsLayer {
+                modifier = Modifier.dockAvatarTarget().graphicsLayer {
                     scaleX = profileAvatarPressScale
                     scaleY = profileAvatarPressScale
                 },

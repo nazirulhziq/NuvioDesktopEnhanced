@@ -32,7 +32,7 @@ const miniPlayerButton = document.getElementById("miniPlayerButton");
 const fullscreenIcon = document.getElementById("fullscreenIcon");
 const title = document.getElementById("title");
 const episode = document.getElementById("episode");
-const playbackMetadata = document.querySelector(".metadata");
+const timeline = document.querySelector(".progress");
 const streamTitle = document.getElementById("streamTitle");
 const providerName = document.getElementById("providerName");
 const playerBadges = document.getElementById("playerBadges");
@@ -56,7 +56,6 @@ const codeineVolumeSlider = document.getElementById("codeineVolumeSlider");
 const codeineTimeLabel = document.getElementById("codeineTimeLabel");
 const codeineSeekContainer = document.getElementById("codeineSeekContainer");
 const codeinePosition = document.getElementById("codeinePosition");
-const codeineDuration = document.getElementById("codeineDuration");
 const codeineSeekPreview = document.getElementById("codeineSeekPreview");
 const seekFilmstripCarousel = document.getElementById("seekFilmstripCarousel");
 const previewTiles = [
@@ -688,7 +687,7 @@ let skipPromptWasDismissed = false;
 let skipPromptAutoHidden = false;
 let skipPromptAutoHideTimer = 0;
 let skipPromptAutoHideActive = false;
-let skipPromptLiftTimer = 0;
+let lastSubtitleClearance = null;
 let pauseMetadataReady = false;
 let pauseMetadataTimer = 0;
 let pauseMetadataEligibilityKey = "";
@@ -758,6 +757,7 @@ const setPipLocked = locked => {
     document.body.style.cursor = "";
   }
   root.classList.toggle("pip-locked", locked);
+  syncTimelineClearance();
   if (pipLockButton) {
     pipLockButton.setAttribute("aria-pressed", String(locked));
     const useEl = pipLockButton.querySelector("use");
@@ -948,6 +948,7 @@ const hideSeekbarOnly = () => {
   seekbarHidingTimer = window.setTimeout(() => {
     seekbarHidingTimer = 0;
     root.classList.remove("codeine-seeking-seekbar-hiding");
+    syncTimelineClearance();
   }, 240);
 };
 
@@ -964,6 +965,7 @@ const triggerSeekbarOnlyOnSeek = () => {
   }
   root.classList.remove("codeine-seeking-seekbar-hiding");
   root.classList.add("codeine-seeking-seekbar-only");
+  syncTimelineClearance();
 };
 
 window.playerSeekActivity = triggerSeekbarOnlyOnSeek;
@@ -1206,7 +1208,7 @@ const syncTorrentStatsOverlay = suppressed => {
   if (!torrentStatsOverlay) return;
   const showClock = Boolean(state.showPlaybackTimeOverlay && !suppressed);
   const showStats = Boolean(state.showTorrentStatsOverlay && String(state.torrentStatsText || "").trim() && !suppressed);
-  torrentStatsOverlay.hidden = !showStats;
+  torrentStatsOverlay.hidden = !(showStats || showClock);
   if (torrentStatsTimeRow) torrentStatsTimeRow.hidden = !showClock;
   if (torrentStatsText) torrentStatsText.hidden = !showStats;
   if (showStats && torrentStatsText) torrentStatsText.textContent = String(state.torrentStatsText).trim();
@@ -1519,17 +1521,8 @@ const setProgress = (positionMs, durationMs, bufferedPositionMs = state.buffered
   if (codeineTimeLabel) {
     setTextContent(codeineTimeLabel, `${formatTime(timePositionMs)} / ${formatTime(durationMs)}`);
   }
-  if (codeinePosition) setTextContent(codeinePosition, formatTime(timePositionMs));
-  if (codeineDuration) {
-    let durText;
-    if (codeineShowRemaining && durationMs > 0) {
-      const remainingMs = Math.max(0, durationMs - timePositionMs);
-      durText = `-${formatTime(remainingMs)}`;
-    } else {
-      durText = formatTime(durationMs);
-    }
-    setTextContent(codeineDuration, durText);
-  }
+  if (codeinePosition) setTextContent(codeinePosition, codeineShowRemaining && durationMs > 0
+    ? `-${formatTime(Math.max(0, durationMs - timePositionMs))}` : formatTime(timePositionMs));
   syncVolumeControl();
 };
 
@@ -2587,48 +2580,6 @@ const resetSubtitleSelectionState = () => {
   pendingSubtitleOptionId = String(state.selectedSubtitleOptionId || (selected ? selected.id : ""));
 };
 
-const LANGUAGE_FLAG_EMOJI = {
-  en: "\u{1F1EC}\u{1F1E7}", ms: "\u{1F1F2}\u{1F1FE}", id: "\u{1F1EE}\u{1F1E9}", zh: "\u{1F1E8}\u{1F1F3}",
-  ja: "\u{1F1EF}\u{1F1F5}", ko: "\u{1F1F0}\u{1F1F7}", ar: "\u{1F1F8}\u{1F1E6}", hi: "\u{1F1EE}\u{1F1F3}",
-  es: "\u{1F1EA}\u{1F1F8}", fr: "\u{1F1EB}\u{1F1F7}", de: "\u{1F1E9}\u{1F1EA}", it: "\u{1F1EE}\u{1F1F9}",
-  pt: "\u{1F1F5}\u{1F1F9}", "pt-br": "\u{1F1E7}\u{1F1F7}", ru: "\u{1F1F7}\u{1F1FA}", th: "\u{1F1F9}\u{1F1ED}",
-  vi: "\u{1F1FB}\u{1F1F3}", tr: "\u{1F1F9}\u{1F1F7}", nl: "\u{1F1F3}\u{1F1F1}", pl: "\u{1F1F5}\u{1F1F1}",
-  sv: "\u{1F1F8}\u{1F1EA}", da: "\u{1F1E9}\u{1F1F0}", no: "\u{1F1F3}\u{1F1F4}", fi: "\u{1F1EB}\u{1F1EE}",
-  he: "\u{1F1EE}\u{1F1F1}", uk: "\u{1F1FA}\u{1F1E6}", cs: "\u{1F1E8}\u{1F1FF}", el: "\u{1F1EC}\u{1F1F7}",
-  ro: "\u{1F1F7}\u{1F1F4}", hu: "\u{1F1ED}\u{1F1FA}", fa: "\u{1F1EE}\u{1F1F7}", bn: "\u{1F1E7}\u{1F1E9}",
-  ta: "\u{1F1F1}\u{1F1F0}", te: "\u{1F1EE}\u{1F1F3}", ml: "\u{1F1F2}\u{1F1FE}", fil: "\u{1F1F5}\u{1F1ED}",
-  tl: "\u{1F1F5}\u{1F1ED}", sw: "\u{1F1F0}\u{1F1EA}", af: "\u{1F1FF}\u{1F1E6}", sr: "\u{1F1F7}\u{1F1F8}",
-  hr: "\u{1F1ED}\u{1F1F7}", bg: "\u{1F1E7}\u{1F1EC}", sk: "\u{1F1F8}\u{1F1F0}", sl: "\u{1F1F8}\u{1F1EE}",
-  lt: "\u{1F1F1}\u{1F1F9}", lv: "\u{1F1F1}\u{1F1FB}", et: "\u{1F1EA}\u{1F1EA}", ca: "\u{1F1EA}\u{1F1F8}",
-};
-const languageFlagEmoji = key => {
-  const normalized = String(key || "").toLowerCase();
-  if (!normalized || normalized.startsWith("__")) return "";
-  return LANGUAGE_FLAG_EMOJI[normalized] || LANGUAGE_FLAG_EMOJI[normalized.split("-")[0]] || "";
-};
-
-const LANGUAGE_NAME_FLAGS = {
-  english: "gb", british: "gb", american: "us", malay: "my", "bahasa melayu": "my", malaysian: "my",
-  indonesian: "id", "bahasa indonesia": "id", chinese: "cn", mandarin: "cn", cantonese: "hk",
-  japanese: "jp", korean: "kr", arabic: "sa", hindi: "in", tamil: "in", telugu: "in", malayalam: "in",
-  spanish: "es", french: "fr", german: "de", italian: "it", portuguese: "pt", "brazilian portuguese": "br",
-  russian: "ru", thai: "th", vietnamese: "vn", turkish: "tr", dutch: "nl", polish: "pl", swedish: "se",
-  danish: "dk", norwegian: "no", finnish: "fi", hebrew: "il", ukrainian: "ua", czech: "cz", greek: "gr",
-  romanian: "ro", hungarian: "hu", persian: "ir", farsi: "ir", bengali: "bd", filipino: "ph", tagalog: "ph",
-  swahili: "ke", afrikaans: "za", serbian: "rs", croatian: "hr", bulgarian: "bg", slovak: "sk",
-  slovenian: "si", lithuanian: "lt", latvian: "lv", estonian: "ee", catalan: "es", icelandic: "is",
-};
-const languageFlagCode = (key, label) => {
-  const rawKey = String(key || "").toLowerCase().trim();
-  const rawLabel = String(label || "").toLowerCase().trim();
-  if (rawKey && !rawKey.startsWith("__")) {
-    if (/^[a-z]{2}$/.test(rawKey)) return rawKey === "en" ? "gb" : rawKey;
-    if (/^[a-z]{2}-[a-z]{2}$/.test(rawKey)) return rawKey.split("-")[1];
-    if (LANGUAGE_NAME_FLAGS[rawKey]) return LANGUAGE_NAME_FLAGS[rawKey];
-  }
-  return LANGUAGE_NAME_FLAGS[rawLabel] || "";
-};
-
 const appendSubtitleLanguageRow = item => {
   const row = document.createElement("button");
   row.type = "button";
@@ -2652,15 +2603,7 @@ const appendSubtitleLanguageRow = item => {
   const label = document.createElement("span");
   label.className = "track-label";
   const flagCode = languageFlagCode(item.key, item.label);
-  if (flagCode) {
-    const flagImage = document.createElement("img");
-    flagImage.className = "track-flag";
-    flagImage.src = `https://flagcdn.com/24x18/${flagCode}.png`;
-    flagImage.alt = "";
-    flagImage.loading = "lazy";
-    flagImage.addEventListener("error", () => flagImage.remove());
-    label.appendChild(flagImage);
-  }
+  if (flagCode) label.appendChild(makeLanguageFlag(flagCode));
   const labelText = document.createElement("span");
   labelText.className = "track-label-text";
   labelText.textContent = item.label;
@@ -2708,7 +2651,9 @@ const appendSubtitleOptionRow = option => {
   copy.appendChild(sourceRow);
   const title = document.createElement("span");
   title.className = "subtitle-option-title";
-  title.textContent = option.title;
+  const flagCode = languageFlagCode(option.languageKey, option.title);
+  if (flagCode) title.appendChild(makeLanguageFlag(flagCode));
+  title.append(option.title);
   copy.appendChild(title);
   if (option.metadata) {
     const metadata = document.createElement("span");
@@ -3446,7 +3391,7 @@ const buildSourceRow = (item, onSelect) => {
   top.className = "track-row-top";
   const name = document.createElement("span");
   name.className = "stream-name";
-  name.textContent = item.label || "Stream";
+  appendStreamFlagText(name, item.label || "Stream");
   top.appendChild(name);
   if (item.isCurrent) {
     const chip = document.createElement("span");
@@ -3459,7 +3404,7 @@ const buildSourceRow = (item, onSelect) => {
   if (item.subtitle) {
     subtitle = document.createElement("span");
     subtitle.className = "stream-subtitle";
-    subtitle.textContent = item.subtitle;
+    appendStreamFlagText(subtitle, item.subtitle);
   }
 
   const isTopPlacement = (item.badgePlacement || "").toUpperCase() === "TOP";
@@ -4424,7 +4369,7 @@ window.nuvioNativeViewportChanged = () => {
   nativeViewportTimer = window.setTimeout(() => {
     root.classList.remove("native-resizing");
   }, state.isInPip ? 5000 : 180);
-  syncSkipPromptPlacement(skipPrompt.classList.contains("visible"));
+  syncTimelineClearance();
   if (activeModal) renderActiveModal(true);
 };
 
@@ -4437,7 +4382,7 @@ window.nuvioNativeResizeEnded = () => {
     document.body.style.cursor = "";
   }
   noteChromeActivity(true);
-  syncSkipPromptPlacement(skipPrompt.classList.contains("visible"));
+  syncTimelineClearance();
   if (activeModal) renderActiveModal(false, true);
 };
 let openingHideTimer = 0;
@@ -4538,31 +4483,26 @@ const startSkipPromptAutoHide = () => {
   }, prefersReducedMotion ? 1 : 10000);
 };
 
-const syncSkipPromptPlacement = showSkip => {
-  const currentLift = Math.max(0, Number.parseFloat(
-    skipPrompt.style.getPropertyValue("--skip-prompt-lift"),
-  ) || 0);
-  let targetLift = 0;
-  if (showSkip && state.controlsVisible && (title.textContent || episode.textContent)) {
-    const rootTop = root.getBoundingClientRect().top;
-    const metadataTop = playbackMetadata.getBoundingClientRect().top - rootTop;
-    const promptBottom = skipPrompt.offsetTop + skipPrompt.offsetHeight + currentLift;
-    const requiredLift = Math.max(0, Math.ceil(promptBottom - metadataTop + 14));
-    const availableLift = Math.max(0, skipPrompt.offsetTop + currentLift - 12);
-    targetLift = Math.min(requiredLift, availableLift);
-  }
-
-  window.clearTimeout(skipPromptLiftTimer);
-  const animateDown = showSkip && targetLift < currentLift;
-  skipPrompt.classList.toggle("lift-down", animateDown);
-  skipPrompt.style.setProperty("--skip-prompt-lift", `${targetLift}px`);
-  if (animateDown) {
-    skipPromptLiftTimer = window.setTimeout(() => {
-      skipPromptLiftTimer = 0;
-      skipPrompt.classList.remove("lift-down");
-    }, 240);
+// Use layout coordinates (not animated transforms). The timeline and prompt
+// share a containing block; percentages also work under WebView UI zoom.
+const syncTimelineClearance = () => {
+  const classes = root.classList;
+  const seekOnly = classes.contains("ui-codeinexo") &&
+    (classes.contains("codeine-seeking-seekbar-only") || classes.contains("codeine-seeking-seekbar-hiding"));
+  const visible = (!classes.contains("chrome-hidden") || seekOnly) &&
+    !["opening-active", "error-active", "pip-locked", "pip-pointer-outside"].some(name => classes.contains(name));
+  const height = timeline.offsetParent?.clientHeight || 0;
+  const inset = visible && height ? height - timeline.offsetTop + 12 : 0;
+  root.style.setProperty("--prompt-clearance", `${inset}px`);
+  const percent = inset ? Math.min(100, Math.ceil(100 * inset / height)) : 0;
+  if (lastSubtitleClearance !== percent) {
+    lastSubtitleClearance = percent;
+    send("subtitleChromeClearance", percent);
   }
 };
+const timelineObserver = new ResizeObserver(syncTimelineClearance);
+timelineObserver.observe(timeline);
+timelineObserver.observe(root);
 
 const renderNativePlaybackPrompts = () => {
   const nextSkipKey = [
@@ -4602,7 +4542,6 @@ const renderNativePlaybackPrompts = () => {
     isChromePointerInside = isChromeInteractionTarget(targetUnderPointer);
     noteChromeActivity(true);
   }
-  syncSkipPromptPlacement(showSkip);
   if (showSkipProgress) {
     startSkipPromptAutoHide();
   } else if (!showSkip || state.controlsVisible || state.skipPromptDismissed) {
@@ -4961,6 +4900,7 @@ const renderChrome = () => {
     renderNativePlaybackPrompts();
   }
   renderPartyChrome();
+  syncTimelineClearance();
   syncChromeAutoHideTimer(showOpening);
 };
 
@@ -6648,10 +6588,6 @@ const toggleCodeineTimeRemaining = event => {
   setProgress(posMs, durMs);
 };
 
-if (codeineDuration) {
-  codeineDuration.addEventListener("click", toggleCodeineTimeRemaining);
-  codeineDuration.setAttribute("data-tooltip", "Toggle remaining time");
-}
 if (codeinePosition) {
   codeinePosition.addEventListener("click", toggleCodeineTimeRemaining);
   codeinePosition.setAttribute("data-tooltip", "Toggle remaining time");

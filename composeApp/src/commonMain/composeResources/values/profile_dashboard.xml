@@ -1,0 +1,26 @@
+<resources>
+    <string name="account_checking_login">Checking sign-in…</string>
+    <string name="account_guest_local">Guest</string>
+    <string name="account_active_profile">Active profile</string>
+    <string name="account_profile_count">Viewing profiles</string>
+    <string name="account_profiles_heading">Profiles</string>
+    <string name="account_signout_local_warning">Sign out on this device and return to the login screen? Local account data will be cleared.</string>
+    <string name="stats_overview">Overview</string>
+    <string name="stats_history">Recent history</string>
+    <string name="stats_scope">Saved playback progress and watched marks on this device, including cached tracking history. These records are not a measure of time spent watching.</string>
+    <string name="stats_no_profile">Select a viewing profile to see its watch statistics.</string>
+    <string name="stats_signed_out">Sign in or continue as a guest to view profile history.</string>
+    <string name="stats_loading">Loading profile history…</string>
+    <string name="stats_unavailable">Could not read the saved history for this profile.</string>
+    <string name="stats_empty">No watch history yet. Play a title or mark it as watched to see it here.</string>
+    <string name="stats_titles">Distinct titles</string>
+    <string name="stats_movies">Movies</string>
+    <string name="stats_series">Series</string>
+    <string name="stats_episodes">Episodes</string>
+    <string name="stats_in_progress">In progress</string>
+    <string name="stats_completed">Completed or marked watched</string>
+    <string name="stats_recent_limit">Latest 20 saved items</string>
+    <string name="stats_untitled">Untitled</string>
+    <string name="stats_refresh">Refresh history</string>
+    <string name="stats_activity">Saved items</string>
+</resources>

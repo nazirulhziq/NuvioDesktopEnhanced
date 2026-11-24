@@ -209,6 +209,7 @@ internal data class AppTabRequests(
 )
 
 internal data class AppTabActions(
+    val onLiveTvCatalogClick: (com.nuvio.app.features.livetv.LiveTvAddonCatalog) -> Unit,
     val onLiveTvChannelClick: ((com.nuvio.app.features.livetv.LiveTvChannel) -> Unit)? = null,
     val onLiveTvVodClick: ((com.nuvio.app.features.livetv.LiveTvVodPlayback) -> Unit)? = null,
     val onCatalogClick: ((HomeCatalogSection) -> Unit)? = null,
@@ -352,6 +353,7 @@ internal fun AppTabHost(
                 com.nuvio.app.features.livetv.LiveTvScreen(
                     modifier = Modifier.fillMaxSize(),
                     scrollToTopRequests = requests.liveTvScrollToTopRequests,
+                    onAddonCatalogClick = actions.onLiveTvCatalogClick,
                     onChannelClick = { channel -> actions.onLiveTvChannelClick?.invoke(channel) },
                     onVodClick = { vod -> actions.onLiveTvVodClick?.invoke(vod) },
                 )
@@ -767,14 +769,7 @@ internal fun AppLoadingContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (profile != null) {
-                androidx.compose.foundation.layout.Box(
-                    modifier = Modifier.graphicsLayer {
-                        translationY = flightDistance.toPx() * flight
-                        scaleX = 1f - 0.62f * flight
-                        scaleY = 1f - 0.62f * flight
-                        alpha = 1f - 0.85f * flight
-                    },
-                ) {
+                FlyingProfileAvatar(flight, flightDistance) {
                     com.nuvio.app.features.profiles.ActiveProfileMiniAvatar(
                         profile = profile,
                         avatars = avatars,

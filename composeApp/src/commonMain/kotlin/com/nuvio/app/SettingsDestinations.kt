@@ -62,6 +62,7 @@ internal fun SettingsDestination(
 @Composable
 internal fun SettingsRootDestination(
     route: SettingsPageRoute,
+    onSwitchProfile: () -> Unit,
     navController: NuvioNavigator,
     useNativeNavigation: Boolean,
     collectionsTitle: String,
@@ -73,6 +74,7 @@ internal fun SettingsRootDestination(
     SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         initialPageName = route.pageName,
+        onSwitchProfile = onSwitchProfile,
         requestedPageName = route.pageName,
         onRequestedPageConsumed = {},
         rootActionsEnabled = false,

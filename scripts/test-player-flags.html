@@ -1,0 +1,54 @@
+<!-- Append this fixture to player-ui/controls.html to test the shipped renderers. -->
+<script>
+(async () => {
+  const check = (condition, message) => { if (!condition) throw Error(message); };
+  const flags = el => [...el.querySelectorAll('.language-flag')];
+  const codes = el => flags(el).map(icon => icon.dataset.country).join('/');
+  const track = (key, label) => {
+    appendSubtitleLanguageRow({key, label, count: 1});
+    return subtitleTrackList.lastElementChild;
+  };
+  const stream = (label, subtitle) => buildSourceRow({label, subtitle}, () => {});
+  for (const [key, expected] of [['en','gb'],['it','it'],['GB','gb'],['eng','gb'],['ja','jp'],['en_US','us'],['zh-Hant-TW','tw'],['__off__','']]) {
+    check(codes(track(key,key)) === expected, 'subtitle: '+key);
+  }
+  for (const [kind, key, expected] of [['builtIn','en','gb'], ['addon','it','it'], ['addon','__imported__','']]) {
+    appendSubtitleOptionRow({kind, languageKey:key, title:'Track', sourceLabel:'Source'});
+    const option = addonSubtitleList.lastElementChild;
+    check(codes(option) === expected && option.querySelector('.subtitle-option-title').textContent === 'Track', 'subtitle option: '+kind+'/'+key);
+  }
+  for (const [secondary, key, expected] of [[false,'en','gb'], [true,'it','it']]) {
+    window.playerControls({secondarySubtitleSupported:true, secondarySubtitleMenu:secondary,
+      selectedSubtitleLanguageKey:key, subtitleLanguageItems:[{key,label:key,count:1}],
+      subtitleOptionItems:[{id:'track',kind:'addon',languageKey:key,title:'Track'}]});
+    resetSubtitleSelectionState(); renderSubtitleSelectionRails();
+    check(codes(subtitleTrackList) === expected && codes(addonSubtitleList) === expected, 'subtitle slot: '+secondary);
+  }
+  const row = stream('Source [GB/IT]', 'Audio: 🇬🇧 / 🇮🇹\nSize 12 GB');
+  check(codes(row) === 'gb/it/gb/it', 'stream name and description');
+  check(codes(stream('GB / IT', 'Languages: IT')) === 'gb/it/it', 'explicit code fields');
+  check(codes(stream('IT', 'Do IT now | 1.5 GB | https://x/GB/IT/file.mkv')) === '', 'ordinary text and URL');
+  check(codes(stream('Dual Audio / GB / IT','release [GB/ZZ]')) === 'gb/it', 'labeled list, invalid tag');
+  const literal = '<img src=x onerror=alert(1)> Digital.GB.IT.mkv';
+  check(stream(literal,'').querySelector('.stream-name').textContent === literal, 'literal provider text');
+  // Read the actual sprite pixels selected by the two rendered CSS positions.
+  document.body.append(row);
+  const icons = flags(row);
+  const style = getComputedStyle(icons[0]);
+  const image = new Image(); image.src = style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)[1];
+  await image.decode();
+  const canvas = document.createElement('canvas'); canvas.width=image.width; canvas.height=image.height;
+  const ctx = canvas.getContext('2d'); ctx.drawImage(image,0,0);
+  function sample(icon, x, y) {
+    const s=getComputedStyle(icon), scale=image.width/parseFloat(s.backgroundSize);
+    const left=-parseFloat(s.backgroundPositionX), top=-parseFloat(s.backgroundPositionY);
+    return ctx.getImageData(Math.floor((left+x*parseFloat(s.width))*scale), Math.floor((top+y*parseFloat(s.height))*scale),1,1).data;
+  }
+  const red = ([r,g,b,a]) => r>150 && g<110 && b<110 && a===255;
+  const green = ([r,g,b,a]) => g>80 && g>r && g>b && a===255;
+  const blue = ([r,g,b,a]) => b>r && b>g && a===255;
+  check(red(sample(icons[0],.5,.5)) && blue(sample(icons[0],.3,.1)), 'Union Jack pixels');
+  check(green(sample(icons[1],.15,.5)) && red(sample(icons[1],.85,.5)), 'Italian tricolour pixels');
+  document.title='PASS: player flags';
+})().catch(error => {document.title='FAIL: '+error.message});
+</script>

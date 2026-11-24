@@ -138,6 +138,7 @@ internal fun AppEnvironment(content: @Composable () -> Unit) {
                 LocalSurfaceStyle provides surfaceStyle,
                 LocalFrostedGlassEnabled provides (surfaceStyle == SurfaceStyle.FrostedGlass),
                 LocalNavigationGlassState provides rememberHazeState(),
+                LocalDockAvatar provides remember { DockAvatarAnchor() }.takeIf { isDesktop },
             ) {
                 content()
             }

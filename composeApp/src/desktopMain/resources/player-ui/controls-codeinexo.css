@@ -101,9 +101,6 @@
   display: none !important;
 }
 
-.player.ui-codeinexo .skip-prompt {
-  bottom: calc(var(--overlay-bottom) + env(safe-area-inset-bottom));
-}
 
 .player.ui-codeinexo .header {
   top: calc(22px + env(safe-area-inset-top));
@@ -494,11 +491,6 @@
 .player.ui-codeinexo .codeine-time-current {
   justify-content: flex-end;
   text-align: right;
-}
-
-.player.ui-codeinexo .codeine-time-duration {
-  justify-content: flex-start;
-  text-align: left;
 }
 
 .player.ui-codeinexo .codeine-seek-container .scrub::-webkit-slider-runnable-track {

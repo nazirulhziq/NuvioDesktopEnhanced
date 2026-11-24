@@ -73,6 +73,8 @@ import dev.chrisbanes.haze.hazeEffect
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+internal val DesktopProfileGlassTint = Color.Black.copy(alpha = 0.56f)
+
 @Composable
 internal fun ProfilePopupContent(
     profiles: List<NuvioProfile>,
@@ -93,6 +95,9 @@ internal fun ProfilePopupContent(
 ) {
     val tokens = MaterialTheme.nuvio
     val shape = RoundedCornerShape(22.dp)
+    val desktopFrost = com.nuvio.app.isDesktop && LocalFrostedGlassEnabled.current
+    val panelTint = if (desktopFrost) DesktopProfileGlassTint else FrostedGlassTokens.PanelTintColor
+    val fallback = if (desktopFrost) DesktopProfileGlassTint else FrostedGlassTokens.FallbackColor
     val panelAlignment = if (opensBelow) Alignment.TopCenter else Alignment.BottomCenter
     val dismissPopup by rememberUpdatedState(onDismissRequest)
     var panelBounds by remember { mutableStateOf(Rect.Zero) }
@@ -135,11 +140,11 @@ internal fun ProfilePopupContent(
                                     noiseFactor = FrostedGlassTokens.NoiseFactor
                                     inputScale = FrostedGlassTokens.PanelInputScale
                                     backgroundColor = tokens.colors.background
-                                    tints = listOf(HazeTint(FrostedGlassTokens.PanelTintColor))
-                                    fallbackTint = HazeTint(FrostedGlassTokens.FallbackColor)
+                                    tints = listOf(HazeTint(panelTint))
+                                    fallbackTint = HazeTint(fallback)
                                 }
                         } else {
-                            Modifier.background(if (LocalSurfaceStyle.current == SurfaceStyle.DarkGlass) DarkGlassSurfaceColor else if (LocalFrostedGlassEnabled.current) FrostedGlassTokens.FallbackColor else tokens.colors.surfacePopover.copy(alpha = 1f))
+                            Modifier.background(if (LocalSurfaceStyle.current == SurfaceStyle.DarkGlass) DarkGlassSurfaceColor else if (LocalFrostedGlassEnabled.current) fallback else tokens.colors.surfacePopover.copy(alpha = 1f))
                         },
                     )
                     .then(
@@ -253,7 +258,7 @@ private fun ProfilePopupItem(
             text = name,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (isActive || isHovered) tokens.colors.textPrimary else tokens.colors.textMuted,
+            color = if (com.nuvio.app.isDesktop && LocalFrostedGlassEnabled.current) Color.White else if (isActive || isHovered) tokens.colors.textPrimary else tokens.colors.textMuted,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

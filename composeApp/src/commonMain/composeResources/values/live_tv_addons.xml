@@ -1,0 +1,9 @@
+<resources>
+    <string name="live_tv_addon_catalogs">Add-on catalogs</string>
+    <string name="live_tv_addon_sources">Sources for this profile</string>
+    <string name="live_tv_addon_select">Select a source below to browse its catalogs.</string>
+    <string name="live_tv_addon_none">No browsable catalogs. Install or enable a catalog add-on in Settings.</string>
+    <string name="live_tv_addon_removed">Unavailable add-on</string>
+    <string name="live_tv_addon_profile">Select a profile to manage its sources.</string>
+    <string name="live_tv_addon_failed">Could not load add-on catalogs.</string>
+</resources>
