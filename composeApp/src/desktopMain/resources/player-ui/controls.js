@@ -1169,6 +1169,25 @@ const computeEndsAt = () => {
   return `Ends at ${h}:${m} ${ampm}`;
 };
 
+// Clock time playback will reach the end — shown at the seek bar's right end.
+const formatEndClock = (positionMsOverride) => {
+  const totalMs = Math.max(0, Number(state.durationMs) || 0);
+  if (totalMs <= 0) return '';
+  const currentMs = Math.max(0, Number(positionMsOverride ?? state.positionMs) || 0);
+  const speedStr = String(state.playbackSpeedLabel || '1x').replace(/x$/i, '');
+  const speed = Math.max(0.01, parseFloat(speedStr) || 1.0);
+  const endsAt = new Date(Date.now() + Math.max(0, totalMs - currentMs) / speed);
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(endsAt);
+  } catch (_) {
+    let h = endsAt.getHours();
+    const m = String(endsAt.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+  }
+};
+
 const updateStatsTimeRow = () => {
   if (!torrentStatsClock || !torrentStatsEnds) return;
   torrentStatsClock.textContent = formatWallClock();
@@ -1510,7 +1529,9 @@ const setProgress = (positionMs, durationMs, bufferedPositionMs = state.buffered
   seek.style.setProperty("--bufferProgress", `${bufferedPercent}%`);
   setTextContent(positionLabel, formatTime(timePositionMs));
   setTextContent(seekPositionLabel, formatTime(timePositionMs));
-  setTextContent(durationLabel, formatTime(durationMs));
+  // Right end of the bar carries the wall-clock time playback will finish.
+  setTextContent(durationLabel, formatEndClock(timePositionMs) || formatTime(durationMs));
+  if (durationLabel) durationLabel.title = `Total ${formatTime(durationMs)}`;
   if (timeLabel) {
     durationMs = durationMs - (durationMs % 1000);
     if (timeLabelShowRemaining) {
@@ -4494,7 +4515,8 @@ const syncTimelineClearance = () => {
   const visible = (!classes.contains("chrome-hidden") || seekOnly) &&
     !["opening-active", "error-active", "pip-locked", "pip-pointer-outside"].some(name => classes.contains(name));
   const height = timeline.offsetParent?.clientHeight || 0;
-  const inset = visible && height ? height - timeline.offsetTop + 12 : 0;
+  // Small fixed gap: the old +12 pushed subtitles needlessly far above the bar.
+  const inset = visible && height ? height - timeline.offsetTop + 4 : 0;
   root.style.setProperty("--prompt-clearance", `${inset}px`);
   const percent = inset ? Math.min(100, Math.ceil(100 * inset / height)) : 0;
   if (lastSubtitleClearance !== percent) {
