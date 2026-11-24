@@ -1992,6 +1992,27 @@ button:disabled {
   margin-bottom: 4px;
 }
 
+/* Seek bar and its end time share one line: the time reads at the right end of
+   the bar instead of floating above the controls. */
+.seek-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.seek-line > .codeine-seek-row {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.seek-line > .timeline-duration {
+  align-self: center;
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
 .time-row {
   display: none;
 }

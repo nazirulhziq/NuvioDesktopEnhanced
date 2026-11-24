@@ -462,17 +462,20 @@
             <div class="seek-preview-card tile-side tile-side-right-2" id="previewTile4"></div>
           </div>
         </div>
-        <span class="timeline-duration" id="duration">00:00</span>
-        <div class="codeine-seek-row">
-          <button class="codeine-time-pill codeine-time-current" id="codeinePosition" type="button">00:00</button>
-          <div class="codeine-seek-container" id="codeineSeekContainer">
-            <div class="codeine-seek-track-bg"></div>
-            <div class="codeine-seek-track-buffer"></div>
-            <div class="codeine-seek-track-hover"></div>
-            <div class="codeine-seek-track-progress"></div>
-            <input id="seek" class="scrub" type="range" min="0" max="1000" step="any" value="0" aria-label="Seek">
-            <div class="chapter-marks" id="chapterMarks" aria-hidden="true"></div>
+        <div class="seek-line">
+          <div class="codeine-seek-row">
+            <button class="codeine-time-pill codeine-time-current" id="codeinePosition" type="button">00:00</button>
+            <div class="codeine-seek-container" id="codeineSeekContainer">
+              <div class="codeine-seek-track-bg"></div>
+              <div class="codeine-seek-track-buffer"></div>
+              <div class="codeine-seek-track-hover"></div>
+              <div class="codeine-seek-track-progress"></div>
+              <input id="seek" class="scrub" type="range" min="0" max="1000" step="any" value="0" aria-label="Seek">
+              <div class="chapter-marks" id="chapterMarks" aria-hidden="true"></div>
+            </div>
           </div>
+          <!-- End time sits at the right end of the seek bar, not floating above it. -->
+          <span class="timeline-duration" id="duration" title="Total duration">00:00</span>
         </div>
         <div class="time-row">
           <span class="time-pill" id="position">00:00</span>
