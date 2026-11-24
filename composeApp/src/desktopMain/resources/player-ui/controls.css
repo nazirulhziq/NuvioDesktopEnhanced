@@ -543,6 +543,17 @@ button:disabled {
   gap: 12px;
 }
 
+/* "Ends at 12:30am" — right edge of the row above the seek bar. */
+.timeline-ends-at {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-control-foreground, #fff);
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
 .player.pip-mode .timeline-heading,
 .player.codeine-seeking-seekbar-only .timeline-heading {
   display: none;

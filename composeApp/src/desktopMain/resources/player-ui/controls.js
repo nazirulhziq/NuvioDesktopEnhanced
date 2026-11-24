@@ -2,6 +2,7 @@ const root = document.getElementById("playerRoot");
 const seek = document.getElementById("seek");
 const positionLabel = document.getElementById("position");
 const seekPositionLabel = document.getElementById("seekPosition");
+const endsAtLabel = document.getElementById("endsAt");
 const durationLabel = document.getElementById("duration");
 const timeLabel = document.getElementById("timeLabel");
 const volumeControl = document.getElementById("volumeControl");
@@ -315,7 +316,6 @@ const torrentStatsOverlay = document.getElementById("torrentStatsOverlay");
 const torrentStatsText = document.getElementById("torrentStatsText");
 const torrentStatsClock = document.getElementById("torrentStatsClock");
 const torrentStatsTimeRow = document.getElementById("torrentStatsTimeRow");
-const torrentStatsEnds = document.getElementById("torrentStatsEnds");
 
 const statVideoCodec = document.getElementById("statVideoCodec");
 const statVideoDecoder = document.getElementById("statVideoDecoder");
@@ -985,6 +985,9 @@ const showCommandToast = command => {
       markSeek((Number(state.positionMs) || 0) + 10000);
     }
     triggerSeekbarOnlyOnSeek();
+    // Forward/rewind should surface the full seek bar layout, not just a toast.
+    if (!state.controlsVisible) setChromeVisibleFromKeyboard(true);
+    else keepChromeVisibleFromKeyboard();
     showPlayerToast(seekLabel);
   }
 };
@@ -1169,29 +1172,24 @@ const computeEndsAt = () => {
   return `Ends at ${h}:${m} ${ampm}`;
 };
 
-// Clock time playback will reach the end — shown at the seek bar's right end.
-const formatEndClock = (positionMsOverride) => {
+// "Ends at 12:30am" — shown at the end of the timeline heading row, above the bar.
+const formatEndsAtLabel = (positionMsOverride) => {
   const totalMs = Math.max(0, Number(state.durationMs) || 0);
   if (totalMs <= 0) return '';
   const currentMs = Math.max(0, Number(positionMsOverride ?? state.positionMs) || 0);
   const speedStr = String(state.playbackSpeedLabel || '1x').replace(/x$/i, '');
   const speed = Math.max(0.01, parseFloat(speedStr) || 1.0);
   const endsAt = new Date(Date.now() + Math.max(0, totalMs - currentMs) / speed);
-  try {
-    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(endsAt);
-  } catch (_) {
-    let h = endsAt.getHours();
-    const m = String(endsAt.getMinutes()).padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${h}:${m} ${ampm}`;
-  }
+  let h = endsAt.getHours();
+  const m = String(endsAt.getMinutes()).padStart(2, '0');
+  const suffix = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `Ends at ${h}:${m}${suffix}`;
 };
 
 const updateStatsTimeRow = () => {
-  if (!torrentStatsClock || !torrentStatsEnds) return;
+  if (!torrentStatsClock) return;
   torrentStatsClock.textContent = formatWallClock();
-  torrentStatsEnds.textContent = computeEndsAt();
 };
 
 // Live-tick the clock every second while the overlay exists
@@ -1529,9 +1527,10 @@ const setProgress = (positionMs, durationMs, bufferedPositionMs = state.buffered
   seek.style.setProperty("--bufferProgress", `${bufferedPercent}%`);
   setTextContent(positionLabel, formatTime(timePositionMs));
   setTextContent(seekPositionLabel, formatTime(timePositionMs));
-  // Right end of the bar carries the wall-clock time playback will finish.
-  setTextContent(durationLabel, formatEndClock(timePositionMs) || formatTime(durationMs));
+  // Bar's right end keeps the total; the clock end time lives in the heading row.
+  setTextContent(durationLabel, formatTime(durationMs));
   if (durationLabel) durationLabel.title = `Total ${formatTime(durationMs)}`;
+  setTextContent(endsAtLabel, formatEndsAtLabel(timePositionMs));
   if (timeLabel) {
     durationMs = durationMs - (durationMs % 1000);
     if (timeLabelShowRemaining) {
