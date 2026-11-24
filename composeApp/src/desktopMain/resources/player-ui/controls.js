@@ -1,6 +1,7 @@
 const root = document.getElementById("playerRoot");
 const seek = document.getElementById("seek");
 const positionLabel = document.getElementById("position");
+const seekPositionLabel = document.getElementById("seekPosition");
 const durationLabel = document.getElementById("duration");
 const timeLabel = document.getElementById("timeLabel");
 const volumeControl = document.getElementById("volumeControl");
@@ -1508,6 +1509,7 @@ const setProgress = (positionMs, durationMs, bufferedPositionMs = state.buffered
   }
   seek.style.setProperty("--bufferProgress", `${bufferedPercent}%`);
   setTextContent(positionLabel, formatTime(timePositionMs));
+  setTextContent(seekPositionLabel, formatTime(timePositionMs));
   setTextContent(durationLabel, formatTime(durationMs));
   if (timeLabel) {
     durationMs = durationMs - (durationMs % 1000);

@@ -2013,6 +2013,26 @@ button:disabled {
   white-space: nowrap;
 }
 
+/* Current time at the left end of the bar; the action-row runtime label is
+   hidden so the right side of the player carries only the clock. */
+.seek-start-time {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-control-foreground, #fff);
+  white-space: nowrap;
+}
+
+.playback-status .time-label {
+  display: none !important;
+}
+
+/* CodeineXO already shows its own left-hand position pill. */
+.player.ui-codeinexo .seek-start-time {
+  display: none !important;
+}
+
 .time-row {
   display: none;
 }
