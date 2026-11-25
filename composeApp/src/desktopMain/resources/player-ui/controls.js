@@ -965,8 +965,11 @@ const triggerSeekbarOnlyOnSeek = () => {
     seekbarHidingTimer = 0;
   }
   root.classList.remove("codeine-seeking-seekbar-hiding");
-  root.classList.add("codeine-seeking-seekbar-only");
-  syncTimelineClearance();
+  if (!root.classList.contains("codeine-seeking-seekbar-only")) {
+    root.classList.add("codeine-seeking-seekbar-only");
+    // Hidden progress ticks only update state. Paint the latest position before revealing the bar.
+    renderChrome();
+  }
 };
 
 window.playerSeekActivity = triggerSeekbarOnlyOnSeek;
@@ -6664,10 +6667,10 @@ window.playerUpdate = update => {
   }
   const nextPositionMs = fineSeekBasePosMs !== null ? state.positionMs : positionMs;
   const nextIsPlaying = pendingIsPlaying === null ? nativeIsPlaying : pendingIsPlaying;
+  const progressChanged = nextPositionMs !== state.positionMs || bufferedPositionMs !== state.bufferedPositionMs;
   const needsChromeRender = isFirstUpdate ||
     previousBufferingSuppression !== seekSuppressBufferingUntil ||
-    durationMs !== state.durationMs || nextPositionMs !== state.positionMs ||
-    bufferedPositionMs !== state.bufferedPositionMs || nextIsPlaying !== state.isPlaying ||
+    durationMs !== state.durationMs || nextIsPlaying !== state.isPlaying ||
     updateIsLoading !== state.isLoading || volumeLevel !== state.volumeLevel ||
     audioTracksChanged || subtitleTracksChanged;
   state = {
@@ -6695,7 +6698,11 @@ window.playerUpdate = update => {
       pendingSubtitleOptionId = selected.id;
     }
   }
-  if (needsChromeRender) renderChrome();
+  // Only defer progress-only ticks in ordinary hidden playback. Reveals paint from current state.
+  const deferProgress = !state.controlsVisible && nextIsPlaying && !updateIsLoading && !state.isInPip &&
+    !isScrubbing && !activeModal && !root.classList.contains("codeine-seeking-seekbar-only") &&
+    !root.classList.contains("codeine-seeking-seekbar-hiding");
+  if (needsChromeRender || (progressChanged && !deferProgress)) renderChrome();
   if (state.seekPreviewEnabled && (!seekrCues || seekrCues.length === 0)) {
     syncSeekrPreviews();
   }

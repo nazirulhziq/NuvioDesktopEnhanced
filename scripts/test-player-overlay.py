@@ -17,21 +17,28 @@ checks = r"""(() => {
   const key = (key, repeat = false) => document.dispatchEvent(new KeyboardEvent('keydown', {key, repeat, bubbles:true, cancelable:true}));
   const rect = selector => document.querySelector(selector).getBoundingClientRect();
   for (const mode of ['codeine_xo', 'official']) {
-    window.playerControls({playerUiMode:mode, controlsVisible:true, title:'Series', episodeText:'S1 E2', isFullscreen:true, durationMs:3600000, showPlaybackTimeOverlay:true});
-    const seek = rect('#seek'), fs = rect('#fullscreenButton'), end = rect('#torrentStatsEnds');
-    const identity = ['#title','#codeineTitle'].map(s => document.querySelector(s)).find(e => e && e.getBoundingClientRect().width);
-    const episode = ['#episode','#codeineEpisode'].map(s => document.querySelector(s)).find(e => e && e.getBoundingClientRect().width);
+    window.playerControls({playerUiMode:mode, controlsVisible:true, title:'Long series title '.repeat(16), episodeText:'S1 E2', isFullscreen:true, durationMs:3600000, showPlaybackTimeOverlay:true, skipPromptVisible:false, nextEpisodeVisible:false});
+    const seek = rect('#seek'), fs = rect('#fullscreenButton'), end = rect('#endsAt'), clock = rect('#torrentStatsClock');
+    const identity = document.querySelector('#title'), episode = document.querySelector('#episode');
     for (const [name, el] of [['title',identity],['episode',episode]]) {
       const r = el?.getBoundingClientRect();
       check(r && r.left < innerWidth/4 && r.top > innerHeight/2 && r.bottom <= seek.top, mode+' '+name);
     }
     check(fs.width && fs.left > innerWidth/2 && fs.bottom < innerHeight/2, mode+' fullscreen');
-    check(end.width && end.bottom < innerHeight/2 && document.querySelector('#torrentStatsEnds').textContent.startsWith('Ends at '), mode+' header clock');
+    check(clock.width && clock.bottom < innerHeight/2 && (clock.right <= fs.left || clock.top >= fs.bottom) && /\d:\d\d/.test(document.querySelector('#torrentStatsClock').textContent), mode+' header clock');
     const duration = rect('#duration');
-    check(duration.width && Math.abs(duration.right-seek.right) <= 1 && Math.abs(duration.bottom-seek.top) <= 16 && document.querySelector('#duration').textContent === '1:00:00', mode+' duration endpoint');
+    check(end.width && end.left >= identity.getBoundingClientRect().right && Math.abs(end.right-duration.right) <= 1 && Math.abs(end.bottom-duration.top) <= 1 && document.querySelector('#endsAt').textContent.startsWith('Ends at '), mode+' Ends at above duration');
+    check(duration.width && duration.left >= seek.right && duration.left-seek.right <= 16 && Math.abs((duration.top+duration.bottom-seek.top-seek.bottom)/2) <= 1 && document.querySelector('#duration').textContent === '1:00:00', mode+' duration beside seek endpoint');
+    for (const id of ['skipPrompt','nextEpisodeCard','openingBackButton','playbackErrorAction']) {
+      const el = document.getElementById(id);
+      el.focus(); check(document.activeElement !== el, mode+' hidden action took focus: '+id);
+    }
     for (const label of ['Skip Intro', 'Skip Outro']) {
-      window.playerControls({skipPromptVisible:true, skipPromptLabel:label});
+      window.playerControls({skipPromptVisible:true, skipPromptLabel:label, nextEpisodeVisible:true, nextEpisodePlayable:true, nextEpisodeTitle:'Next episode'});
       check(rect('#skipPrompt').bottom < rect('#title').top, mode+' '+label+' overlaps title');
+      check(rect('#nextEpisodeCard').bottom < rect('#title').top, mode+' next episode overlaps title');
+      document.querySelector('#skipPrompt').focus();
+      check(document.activeElement.id === 'skipPrompt', mode+' visible skip cannot take focus');
     }
     window.playerControls({controlsVisible:false, showSeekbarWhileSeeking:true});
     check(clearances.at(-1) === 0, mode+' hidden subtitles not restored');
@@ -42,7 +49,7 @@ checks = r"""(() => {
     check(clearances.at(-1) === 0, mode+' seek-only cleared');
     window.playerControls({controlsVisible:true, showRemainingTime:true});
     const progress = document.querySelector('.progress');
-    const expected = Math.ceil(100*(progress.offsetParent.clientHeight-progress.offsetTop+12)/progress.offsetParent.clientHeight);
+    const expected = Math.ceil(100*(progress.offsetParent.clientHeight-progress.offsetTop+4)/progress.offsetParent.clientHeight);
     check(clearances.at(-1) === expected && expected > seekInset, mode+' full controls clearance');
     check(document.querySelector('#duration').textContent === '1:00:00', mode+' remaining toggle changed duration');
     check(!identity.inert, mode+' title must remain interactive');
@@ -66,7 +73,7 @@ def result(view, task):
     global status
     try:
         error = view.evaluate_javascript_finish(task).to_string()
-        print(error or 'PASS: both themes, title/skip and duration geometry, subtitle clearance and shortcut routing')
+        print(error or 'PASS: both themes, prompt/title spacing, seek labels, clock, focus, subtitle clearance and shortcut routing')
         status = int(bool(error))
     finally:
         Gtk.main_quit()

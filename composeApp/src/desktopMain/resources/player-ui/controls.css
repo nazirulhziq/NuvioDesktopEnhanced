@@ -821,7 +821,7 @@ button:disabled {
 .next-episode-card {
   position: absolute;
   right: var(--hp);
-  bottom: calc(var(--overlay-bottom) + env(safe-area-inset-bottom));
+  bottom: max(calc(var(--overlay-bottom) + env(safe-area-inset-bottom)), var(--prompt-clearance, 0px));
   z-index: 7;
   width: min(292px, calc(100vw - (var(--hp) * 2)));
   display: flex;
@@ -1040,6 +1040,14 @@ button:disabled {
     opacity var(--motion-standard) ease,
     box-shadow var(--motion-standard) ease;
   will-change: transform;
+}
+
+/* Opacity and pointer-events alone leave dismissed actions in the Tab order. */
+.skip-prompt:not(.visible),
+.next-episode-card:not(.visible),
+.opening-overlay:not(.visible) .opening-button,
+.playback-error:not(.visible) .playback-error-action {
+  visibility: hidden;
 }
 
 .header-button:hover {

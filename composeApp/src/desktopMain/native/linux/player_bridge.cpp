@@ -1126,6 +1126,7 @@ gboolean createWebviewOnGtk(gpointer data) {
             "web-context", sharedControlsContext(),
             "user-content-manager", ucm,
             nullptr));
+        g_object_unref(ucm);  // the view owns its own reference
         GdkRGBA transparent = {0.0, 0.0, 0.0, 0.0};
         webkit_web_view_set_background_color(wv, &transparent);
 
@@ -1254,6 +1255,7 @@ gboolean createWebviewOnGtk(gpointer data) {
     GdkWindow *hostGdk = gdk_x11_window_foreign_new_for_display(gdkDisplay, s->hostXid);
     if (hostGdk) {
         gdk_window_reparent(gdkWin, hostGdk, 0, 0);
+        g_object_unref(hostGdk);
     } else {
         NUVIO_ERR("foreign host GdkWindow wrap failed; falling back to XReparentWindow");
         XReparentWindow(dpy, gtkXid, s->hostXid, 0, 0);
@@ -1526,6 +1528,7 @@ gboolean warmupOnGtk(gpointer data) {
                                                      "web-context", sharedControlsContext(),
                                                      "user-content-manager", ucm,
                                                      nullptr));
+    g_object_unref(ucm);  // gWarmupUcm borrows from the view until adoption
     GdkRGBA transparent = {0.0, 0.0, 0.0, 0.0};
     webkit_web_view_set_background_color(wv, &transparent);
     // Full player-parity settings — this view becomes the player's overlay.
